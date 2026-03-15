@@ -21,9 +21,9 @@ scriptings:
     script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/IPPure.js
 
 widgets:
-- name: 📶 网络信息
+- name: 网络信息
   script_name: Network_Info_Script
-- name: ✈️ 代理检测
+- name: 代理检测
   script_name: Proxy_Check_Script
-- name: 🛡️ IP 纯净度
+- name: IP 纯净度
   script_name: IP_Pure_Script
