@@ -1,0 +1,17 @@
+# ==========================================
+# 📌 极客网络看板合集 (Crypto 深紫系列)
+# ✨ 排序方案：网络信息 > 代理检测 > IP 纯净度
+# ==========================================
+
+widgets:
+  - name: 📶 网络信息 (Local & Public)
+    url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/NetworkInfo.js
+    interval: 60
+
+  - name: ✈️ 代理检测 (Dual-IP)
+    url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/ProxyCheck.js
+    interval: 60
+
+  - name: 🛡️ IP 纯净度雷达
+    url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/IPPure.js
+    interval: 300
