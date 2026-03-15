@@ -9,27 +9,27 @@ name: "网络信息组件合集"
 description: "包含 IP 纯净度、网络信息、代理检测的 Egern 小组件合集，适用于实时网络状态查看。"
 
 scriptings:
-# 1. 代理检测 (原链路速度)
+# 1. 代理检测
 - generic:
     name: 代理检测
     script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Lsdl.js
 
-# 2. IP纯净度 (原 IP 信息)
+# 2. IP纯净度
 - generic:
     name: IP纯净度
     script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Ip.js
 
-# 3. 网络信息 (原局域网信息)
+# 3. 网络信息
 - generic:
     name: 网络信息
     script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Lan.js
 
 widgets:
+- name: 网络信息
+  script_name: 网络信息
+
 - name: 代理检测
   script_name: 代理检测
 
 - name: IP纯净度
   script_name: IP纯净度
-
-- name: 网络信息
-  script_name: 网络信息
