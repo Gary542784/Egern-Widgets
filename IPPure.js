@@ -34,6 +34,7 @@ export default async function(ctx) {
     else { riskTxt = 纯净低危 (${risk}); riskCol = C_GREEN; riskIc = "checkmark.shield.fill"; }
   }
 
+  // ✨ 100% 统一 Row 样式：字号全部锁死在 11
   const Row = (ic, icCol, label, val, valCol) => ({
     type: 'stack', direction: 'row', alignItems: 'center', gap: 6,
     children: [
