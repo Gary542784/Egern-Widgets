@@ -1,17 +1,33 @@
 # ==========================================
-# 📌 极客网络看板合集 (Crypto 深紫系列)
-# ✨ 排序方案：网络信息 > 代理检测 > IP 纯净度
+# 📌 模块名称: Egern 极客网络看板合集
+# ✨ 特色功能: 统一整合网络信息、代理检测和 IP 纯净度 3 大核心组件。采用 Crypto 深紫极客风格，支持像素级对齐排版与多彩分类图标。
+# 🔗 引用链接: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Widgets.yaml
+# ⏱️ 更新时间: 2026-03-15
 # ==========================================
 
+name: "极客网络看板合集"
+description: "专为强迫症设计的网络检测组件包。包含内/公网全景探测、出入口双 IP 对比以及 IPPure 风险评估，统一采用 Menlo 代码字体与深紫渐变视觉。"
+
+scriptings:
+# 1. 实时网络信息 (内网 + 直连公网)
+- generic:
+    name: 网络信息_Script
+    script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/NetworkInfo.js
+
+# 2. 代理检测 (本地 IP + 落地 IP 深度对比)
+- generic:
+    name: 代理检测_Script
+    script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/ProxyCheck.js
+
+# 3. IP 纯净度雷达 (原生识别 + 风险评分)
+- generic:
+    name: IP纯净度_Script
+    script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/IPPure.js
+
 widgets:
-  - name: 📶 网络信息 (Local & Public)
-    url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/NetworkInfo.js
-    interval: 60
-
-  - name: ✈️ 代理检测 (Dual-IP)
-    url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/ProxyCheck.js
-    interval: 60
-
-  - name: 🛡️ IP 纯净度雷达
-    url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/IPPure.js
-    interval: 300
+- name: 📶 网络信息
+  script_name: 网络信息_Script
+- name: ✈️ 代理检测
+  script_name: 代理检测_Script
+- name: 🛡️ IP 纯净度
+  script_name: IP纯净度_Script
