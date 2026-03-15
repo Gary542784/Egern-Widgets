@@ -1,35 +1,35 @@
 # ==========================================
 # 📌 模块名称: Egern 网络信息组件合集
-# ✨ 特色功能: 整合 IP 信息、局域网设备信息、链路速度监控 3 个桌面小组件，实时展示网络状态，适用于 Egern iOS 桌面小组件。
+# ✨ 特色功能: 整合 IP 纯净度检测、网络信息、代理检测 3 个桌面小组件，实时展示网络状态。
 # 🔗 引用链接: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/
 # ⏱️ 更新时间: 2026-03-16
 # ==========================================
 
 name: "网络信息组件合集"
-description: "包含 IP 信息、LAN 局域网信息、链路速度监控的 Egern 小组件合集，适用于实时网络状态查看。"
+description: "包含 IP 纯净度、网络信息、代理检测的 Egern 小组件合集，适用于实时网络状态查看。"
 
 scriptings:
-# 1. 公网 IP 信息
+# 1. 代理检测 (原链路速度)
 - generic:
-    name: IP 信息
-    script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Ip.js
-
-# 2. 局域网信息
-- generic:
-    name: 局域网信息
-    script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Lan.js
-
-# 3. 链路速度监控
-- generic:
-    name: 链路速度
+    name: 代理检测
     script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Lsdl.js
 
+# 2. IP纯净度 (原 IP 信息)
+- generic:
+    name: IP纯净度
+    script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Ip.js
+
+# 3. 网络信息 (原局域网信息)
+- generic:
+    name: 网络信息
+    script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Lan.js
+
 widgets:
-- name: IP 信息
-  script_name: IP 信息
+- name: 代理检测
+  script_name: 代理检测
 
-- name: 局域网信息
-  script_name: 局域网信息
+- name: IP纯净度
+  script_name: IP纯净度
 
-- name: 链路速度
-  script_name: 链路速度
+- name: 网络信息
+  script_name: 网络信息
