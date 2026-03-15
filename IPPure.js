@@ -16,29 +16,29 @@ export default async function(ctx) {
 
   const ip = d.ip || "获取失败";
   const ipLabel = ip.includes(':') ? "IPv6" : "IPv4";
-  const asn = d.asn ? `AS${d.asn} ${d.asOrganization || ""}`.trim() : "未知";
+  const asn = d.asn ? AS${d.asn} ${d.asOrganization || ""}.trim() : "未知";
   
   let code = d.countryCode || "";
   if (code.toUpperCase() === 'TW') code = 'CN';
   const flag = code ? String.fromCodePoint(...code.toUpperCase().split('').map(c => 127397 + c.charCodeAt())) : "🌐";
-  const loc = `${flag} ${d.country || ""} ${d.city || ""}`.trim() || "未知位置";
+  const loc = ${flag} ${d.country || ""} ${d.city || ""}.trim() || "未知位置";
   
   const nativeText = d.isResidential === true ? "🏠 原生住宅" : (d.isResidential === false ? "🏢 商业机房" : "未知");
 
   const risk = d.fraudScore;
   let riskTxt = "获取失败", riskCol = C_SUB, riskIc = "questionmark.shield.fill";
   if (risk !== undefined) {
-    if (risk >= 80) { riskTxt = `极高风险 (${risk})`; riskCol = { light: '#FF3B30', dark: '#FF3B30' }; riskIc = "xmark.shield.fill"; }
-    else if (risk >= 70) { riskTxt = `高风险 (${risk})`; riskCol = { light: '#FF9500', dark: '#FF9500' }; riskIc = "exclamationmark.shield.fill"; }
-    else if (risk >= 40) { riskTxt = `中等风险 (${risk})`; riskCol = { light: '#FFD60A', dark: '#FFD60A' }; riskIc = "exclamationmark.shield.fill"; }
-    else { riskTxt = `纯净低危 (${risk})`; riskCol = C_GREEN; riskIc = "checkmark.shield.fill"; }
+    if (risk >= 80) { riskTxt = 极高风险 (${risk}); riskCol = { light: '#FF3B30', dark: '#FF3B30' }; riskIc = "xmark.shield.fill"; }
+    else if (risk >= 70) { riskTxt = 高风险 (${risk}); riskCol = { light: '#FF9500', dark: '#FF9500' }; riskIc = "exclamationmark.shield.fill"; }
+    else if (risk >= 40) { riskTxt = 中等风险 (${risk}); riskCol = { light: '#FFD60A', dark: '#FFD60A' }; riskIc = "exclamationmark.shield.fill"; }
+    else { riskTxt = 纯净低危 (${risk}); riskCol = C_GREEN; riskIc = "checkmark.shield.fill"; }
   }
 
   // ✨ 100% 统一 Row 样式：字号全部锁死在 11
   const Row = (ic, icCol, label, val, valCol) => ({
     type: 'stack', direction: 'row', alignItems: 'center', gap: 6,
     children: [
-      { type: 'image', src: `sf-symbol:${ic}`, color: icCol, width: 13, height: 13 },
+      { type: 'image', src: sf-symbol:${ic}, color: icCol, width: 13, height: 13 },
       { type: 'text', text: label, font: { size: 11 }, textColor: C_SUB },
       { type: 'spacer' }, 
       { type: 'text', text: val, font: { size: 11, weight: 'bold', family: 'Menlo' }, textColor: valCol, maxLines: 1, minScale: 0.6 }
