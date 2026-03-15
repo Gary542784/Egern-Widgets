@@ -1,0 +1,64 @@
+/**
+ * 📌 桌面小组件: 📶 网络信息 (Local & Public)
+ */
+export default async function(ctx) {
+  const BG_COLORS = [{ light: '#0D0D1A', dark: '#0D0D1A' }, { light: '#2D1B69', dark: '#2D1B69' }];
+  const C_TITLE = { light: '#FFD700', dark: '#FFD700' }, C_SUB = { light: '#A2A2B5', dark: '#A2A2B5' }, C_GREEN = { light: '#32D74B', dark: '#32D74B' };
+
+  const fmtISP = (isp) => {
+    if (!isp) return "未知";
+    const s = String(isp).toLowerCase();
+    if (/移动|mobile|cmcc/i.test(s)) return "中国移动";
+    if (/电信|telecom|chinanet/i.test(s)) return "中国电信";
+    if (/联通|unicom/i.test(s)) return "中国联通";
+    return isp; 
+  };
+
+  const d = ctx.device || {};
+  const isWifi = !!d.wifi?.ssid;
+  let netName = isWifi ? d.wifi.ssid : (d.cellular?.radio?.toUpperCase() || "未连接");
+  const localIp = d.ipv4?.address || "获取失败", gateway = d.ipv4?.gateway || "获取失败";
+
+  let pubIp = "获取中...", pubLoc = "未知位置", pubIsp = "未知运营商";
+  try {
+    const res = await ctx.http.get('https://myip.ipip.net/json', { headers: { "User-Agent": "Mozilla/5.0" }, timeout: 4000 });
+    const body = JSON.parse(await res.text());
+    if (body.data) {
+      pubIp = body.data.ip;
+      pubLoc = `🇨🇳 ${body.data.location[0]} ${body.data.location[1]} ${body.data.location[2]}`.trim();
+      pubIsp = fmtISP(body.data.location[4] || body.data.location[3]);
+    }
+  } catch (e) {}
+
+  const Row = (ic, icCol, label, val, valCol) => ({
+    type: 'stack', direction: 'row', alignItems: 'center', gap: 6,
+    children: [
+      { type: 'image', src: `sf-symbol:${ic}`, color: icCol, width: 13, height: 13 },
+      { type: 'text', text: label, font: { size: 11 }, textColor: C_SUB },
+      { type: 'spacer' },
+      { type: 'text', text: val, font: { size: 11, weight: 'bold', family: 'Menlo' }, textColor: valCol, maxLines: 1, minScale: 0.6 }
+    ]
+  });
+
+  return {
+    type: 'widget', padding: 14, backgroundGradient: { type: 'linear', colors: BG_COLORS, startPoint: { x: 0, y: 0 }, endPoint: { x: 1, y: 1 } },
+    children: [
+      { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
+          { type: 'image', src: `sf-symbol:${isWifi ? 'wifi' : 'antenna.radiowaves.left.and.right'}`, color: C_TITLE, width: 16, height: 16 },
+          { type: 'text', text: '网络信息', font: { size: 14, weight: 'heavy' }, textColor: C_TITLE },
+          { type: 'spacer' }, { type: 'text', text: 'Local & Public', font: { size: 9 }, textColor: 'rgba(255,255,255,0.2)' }
+      ]},
+      { type: 'spacer', length: 12 },
+      { type: 'stack', direction: 'column', gap: 4, children: [
+          Row("network", { light: '#00AAE4', dark: '#00AAE4' }, "当前连接", netName, C_GREEN),
+          Row("iphone", { light: '#32D74B', dark: '#32D74B' }, "内网 IP", localIp, C_GREEN),
+          Row("wifi.router.fill", { light: '#FF9500', dark: '#FF9500' }, "路由网关", gateway, C_GREEN),
+          { type: 'spacer', length: 2 },
+          Row("globe", { light: '#9945FF', dark: '#9945FF' }, "直连公网", pubIp, C_GREEN),
+          Row("mappin.and.ellipse", { light: '#9945FF', dark: '#9945FF' }, "所在位置", pubLoc, '#FFFFFF'),
+          Row("antenna.radiowaves.left.and.right", { light: '#9945FF', dark: '#9945FF' }, "运营商", pubIsp, '#FFFFFF')
+      ]},
+      { type: 'spacer' }
+    ]
+  };
+}
