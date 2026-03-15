@@ -1,25 +1,21 @@
 # ==========================================
 # 📌 模块名称: Egern 极客网络看板合集
-# ✨ 特色功能: 统一整合网络信息、代理检测和 IP 纯净度 3 大核心组件。采用极客深紫风格，像素级对齐排版。
-# 🔗 引用链接: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Widgets.yaml
+# ✨ 引用链接: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Widgets.yaml
 # ⏱️ 更新时间: 2026-03-15
 # ==========================================
 
 name: "极客网络看板合集"
-description: "专为强迫症设计的网络检测组件包。统一采用 Menlo 字体、字号 11 与深紫渐变视觉。"
+description: "像素级对齐版。统一 Menlo 字体、字号 11、数值全绿、深紫视觉。"
 
 scriptings:
-# 1. 实时网络信息
 - generic:
     name: Network_Info_Script
     script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/NetworkInfo.js
 
-# 2. 代理检测
 - generic:
     name: Proxy_Check_Script
     script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/ProxyCheck.js
 
-# 3. IP 纯净度雷达
 - generic:
     name: IP_Pure_Script
     script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/IPPure.js
