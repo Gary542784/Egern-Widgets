@@ -1,6 +1,6 @@
 export default async function(ctx) {
   const BG_COLORS = [{ light: '#0D0D1A', dark: '#0D0D1A' }, { light: '#2D1B69', dark: '#2D1B69' }];
-  const C_TITLE = { light: '#FFD700', dark: '#FFD700' }, C_SUB = { light: '#A2A2B5', dark: '#A2A2B5' }, C_GREEN = { light: '#32D74B', dark: '#32D74B' };
+  const C_TITLE = { light: '#FFD700', dark: '#FFD700' }, C_SUB = { light: '#A2A2B5', dark: '#A2A2B5' }, C_GREEN = { light: '#32D74B', dark: '#32D74B' }, C_MAIN = { light: '#FFFFFF', dark: '#FFFFFF' };
 
   let d = {};
   try {
@@ -45,9 +45,14 @@ export default async function(ctx) {
       { type: 'stack', direction: 'column', gap: 6, children: [
           Row("globe", { light: '#00AAE4', dark: '#00AAE4' }, "IPv4", ip, C_GREEN),
           Row("number.square.fill", { light: '#00AAE4', dark: '#00AAE4' }, "归属网络", asn, C_GREEN),
-          Row("mappin.and.ellipse", { light: '#9945FF', dark: '#9945FF' }, "位置", loc, C_GREEN),
-          Row("building.2.fill", { light: '#9945FF', dark: '#9945FF' }, "原生属性", native, C_GREEN),
-          Row(riskIc, riskCol, "风险评级", riskTxt, riskCol)
+          Row("mappin.and.ellipse", { light: '#9945FF', dark: '#9945FF' }, "位置", loc, C_MAIN),
+          Row("building.2.fill", { light: '#9945FF', dark: '#9945FF' }, "原生属性", native, C_MAIN),
+          { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
+              { type: 'image', src: `sf-symbol:${riskIc}`, color: riskCol, width: 14, height: 14 },
+              { type: 'text', text: "风险评级", font: { size: 11 }, textColor: C_SUB },
+              { type: 'spacer' },
+              { type: 'text', text: riskTxt, font: { size: 11, weight: 'bold', family: 'Menlo' }, textColor: riskCol }
+          ]}
       ]},
       { type: 'spacer' }
     ]
