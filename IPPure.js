@@ -1,5 +1,5 @@
 /**
- * 📌 桌面小组件 2: 🛡️ IP 纯净度 (像素级统一字号版)
+ * 📌 桌面小组件 2: 🛡️ IP 纯净度 (符号精修对齐版)
  */
 export default async function(ctx) {
   const BG_COLORS = [{ light: '#0D0D1A', dark: '#0D0D1A' }, { light: '#2D1B69', dark: '#2D1B69' }];
@@ -11,34 +11,43 @@ export default async function(ctx) {
   let d = {};
   try {
     const res = await ctx.http.get('https://my.ippure.com/v1/info', { timeout: 4000 });
-    d = JSON.parse(await res.text());
-  } catch (e) {}
+    const text = await res.text();
+    if (text) d = JSON.parse(text);
+  } catch (e) {
+    console.log("IPPure Fetch Error: " + e);
+  }
 
   const ip = d.ip || "获取失败";
   const ipLabel = ip.includes(':') ? "IPv6" : "IPv4";
-  const asn = d.asn ? AS${d.asn} ${d.asOrganization || ""}.trim() : "未知";
+  
+  // ✨ 修复了这里的反引号和拼接
+  const asn = d.asn ? `AS${d.asn} ${d.asOrganization || ""}`.trim() : "未知";
   
   let code = d.countryCode || "";
   if (code.toUpperCase() === 'TW') code = 'CN';
   const flag = code ? String.fromCodePoint(...code.toUpperCase().split('').map(c => 127397 + c.charCodeAt())) : "🌐";
-  const loc = ${flag} ${d.country || ""} ${d.city || ""}.trim() || "未知位置";
+  
+  // ✨ 修复了这里的反引号
+  const loc = `${flag} ${d.country || ""} ${d.city || ""}`.trim() || "未知位置";
   
   const nativeText = d.isResidential === true ? "🏠 原生住宅" : (d.isResidential === false ? "🏢 商业机房" : "未知");
 
   const risk = d.fraudScore;
   let riskTxt = "获取失败", riskCol = C_SUB, riskIc = "questionmark.shield.fill";
-  if (risk !== undefined) {
-    if (risk >= 80) { riskTxt = 极高风险 (${risk}); riskCol = { light: '#FF3B30', dark: '#FF3B30' }; riskIc = "xmark.shield.fill"; }
-    else if (risk >= 70) { riskTxt = 高风险 (${risk}); riskCol = { light: '#FF9500', dark: '#FF9500' }; riskIc = "exclamationmark.shield.fill"; }
-    else if (risk >= 40) { riskTxt = 中等风险 (${risk}); riskCol = { light: '#FFD60A', dark: '#FFD60A' }; riskIc = "exclamationmark.shield.fill"; }
-    else { riskTxt = 纯净低危 (${risk}); riskCol = C_GREEN; riskIc = "checkmark.shield.fill"; }
+  if (risk !== undefined && risk !== null) {
+    // ✨ 修复了这里的字符串包裹和反引号
+    if (risk >= 80) { riskTxt = `极高风险 (${risk})`; riskCol = { light: '#FF3B30', dark: '#FF3B30' }; riskIc = "xmark.shield.fill"; }
+    else if (risk >= 70) { riskTxt = `高风险 (${risk})`; riskCol = { light: '#FF9500', dark: '#FF9500' }; riskIc = "exclamationmark.shield.fill"; }
+    else if (risk >= 40) { riskTxt = `中等风险 (${risk})`; riskCol = { light: '#FFD60A', dark: '#FFD60A' }; riskIc = "exclamationmark.shield.fill"; }
+    else { riskTxt = `纯净低危 (${risk})`; riskCol = C_GREEN; riskIc = "checkmark.shield.fill"; }
   }
 
   // ✨ 100% 统一 Row 样式：字号全部锁死在 11
   const Row = (ic, icCol, label, val, valCol) => ({
     type: 'stack', direction: 'row', alignItems: 'center', gap: 6,
     children: [
-      { type: 'image', src: sf-symbol:${ic}, color: icCol, width: 13, height: 13 },
+      // ✨ 修复了这里的反引号
+      { type: 'image', src: `sf-symbol:${ic}`, color: icCol, width: 13, height: 13 },
       { type: 'text', text: label, font: { size: 11 }, textColor: C_SUB },
       { type: 'spacer' }, 
       { type: 'text', text: val, font: { size: 11, weight: 'bold', family: 'Menlo' }, textColor: valCol, maxLines: 1, minScale: 0.6 }
