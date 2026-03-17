@@ -1,16 +1,16 @@
 /**
- * ⛽ 全国油价（极致黑白 Pro - 底部布局深度优化版）
- * 🛠 修复：大幅增加数值区块与底部的间距，让时间日期彻底“下沉”
+ * ⛽ 全国油价（极致黑白 Pro - 布局最终修正版）
+ * 🛠 修复：强制下移底部信息，通过加大固定间距和压缩底部 Padding 实现
  */
 
 export default async function (ctx) {
   const T = {
-    bg: { light: '#FFFFFF', dark: '#000000' },
-    txt: { light: '#000000', dark: '#FFFFFF' },
+    bg: { light: '#000000', dark: '#000000' }, // 强制深色背景以对齐你的截图风格
+    txt: { light: '#FFFFFF', dark: '#FFFFFF' },
     sub: { light: '#8E8E93', dark: '#8E8E93' },
-    line: { light: '#E5E5EA', dark: '#1C1C1E' },
-    accent: { light: '#FF9500', dark: '#FFD700' },
-    block: { light: '#F2F2F7', dark: '#1C1C1E' }
+    line: { light: '#1C1C1E', dark: '#1C1C1E' },
+    accent: { light: '#FFD700', dark: '#FFD700' },
+    block: { light: '#1C1C1E', dark: '#1C1C1E' }
   };
 
   const CAL_2026 = [
@@ -30,12 +30,12 @@ export default async function (ctx) {
     }
   }
 
-  let region = "加载中", trend = "调价信息获取中...", trendCol = T.sub;
+  let region = "加载中", trend = "获取调价趋势...", trendCol = T.sub;
   let p = { p92: "--", p95: "--", p98: "--", diesel: "--" };
 
   try {
     const reg = ctx.env.region || "sichuan/chengdu";
-    const res = await ctx.http.get(`http://m.qiyoujiage.com/${reg}.shtml`, { timeout: 3000 });
+    const res = await ctx.http.get(`http://m.qiyoujiage.com/${reg}.shtml`, { timeout: 4000 });
     const html = await res.text();
     const rName = html.match(/<title>([^_]+)_/);
     if (rName) region = rName[1].replace(/(油价|实时|今日|最新|价格)/g, '');
@@ -54,12 +54,15 @@ export default async function (ctx) {
       const d = tMatch[1].match(/(\d{1,2}月\d{1,2}日)/)?.[1] || "";
       const amt = tMatch[2].match(/[\d\.]+\s*元\/升/g)?.[0] || "";
       trend = `${d}${isUp?'上涨':isDown?'下调':'调价'} ${amt}`;
-      trendCol = isUp ? {light:'#FF3B30', dark:'#FF453A'} : (isDown ? {light:'#34C759', dark:'#32D74B'} : T.sub);
+      trendCol = isUp ? '#FF453A' : (isDown ? '#32D74B' : T.sub);
     }
   } catch (e) { region = "成都"; }
 
   return {
-    type: "widget", padding: 16, backgroundColor: T.bg,
+    type: "widget", 
+    // 🚀 调整内边距：[上, 右, 下, 左]，减小底部边距
+    padding: [16, 16, 10, 16], 
+    backgroundColor: T.bg,
     children: [
       { type: 'spacer', length: 5 },
       // 头部
@@ -70,7 +73,7 @@ export default async function (ctx) {
           { type: "spacer" }, 
           { type: "text", text: `下轮调价: ${nextDate}`, font: { size: 11, weight: "bold", family: "Menlo" }, textColor: T.sub }
       ]},
-      { type: 'spacer', length: 10 },
+      { type: 'spacer', length: 12 },
       { type: 'stack', height: 0.5, backgroundColor: T.line }, 
       { type: 'spacer', length: 12 },
 
@@ -89,11 +92,9 @@ export default async function (ctx) {
           ]
       }))},
 
-      // 🚀 核心改动点：增加两个 spacer
-      // 第一个固定 spacer 确保它离开数值区块一段距离
-      { type: 'spacer', length: 20 },
-      // 第二个弹性 spacer 强制占据剩余所有空间，把底部内容压死到最下面
-      { type: 'spacer' },
+      // 🚀 核心改动：使用更大的固定间距把底部文字推下去
+      { type: 'spacer', length: 30 }, 
+      { type: 'spacer' }, // 弹性补充
       
       // 底部 (时间 & 趋势)
       { type: "stack", direction: "row", alignItems: "center", children: [
@@ -104,7 +105,6 @@ export default async function (ctx) {
           { type: "spacer" },
           { type: "text", text: trend, font: { size: 10, weight: "bold" }, textColor: trendCol, lineLimit: 1, minScale: 0.5 }
       ]},
-      // 底部防贴边间距设小，让整体下沉感更强
       { type: 'spacer', length: 2 } 
     ]
   };
