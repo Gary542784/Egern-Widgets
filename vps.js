@@ -70,4 +70,4 @@ export default async function (ctx) {
   const ip = (data.ip_addresses && data.ip_addresses[0]) ? data.ip_addresses[0] : 'N/A';
 
   // 进度条颜色逻辑
-  const barColor = usedPercent >= 90 ? C_RED : usedPercent >= 70 ? C_YELLOW :
+  const barColor = usedPercent >= 90 ? C_RED : usedPercent >= 70 ? C_YELLOW 
