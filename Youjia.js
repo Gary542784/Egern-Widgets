@@ -1,42 +1,28 @@
 export default async function (ctx) {
-  const T = {
-    // ✅ 改成系统自适应
-    bg: { light: '#F2F2F7', dark: '#000000' },
-    txt: { light: '#000000', dark: '#FFFFFF' },
-    sub: { light: '#8E8E93', dark: '#8E8E93' },
-    line: { light: '#E5E5EA', dark: '#1C1C1E' },
-    accent: { light: '#FFB800', dark: '#FFD700' },
-    block: { light: '#FFFFFF', dark: '#1C1C1E' }
-  };
+  const isDark = ctx.isDarkMode;
 
-  const CAL_2026 = [
-    {m: 1, d: 12}, {m: 1, d: 23}, {m: 2, d: 9}, {m: 2, d: 23}, {m: 3, d: 9}, {m: 3, d: 23},
-    {m: 4, d: 7}, {m: 4, d: 21}, {m: 5, d: 8}, {m: 5, d: 22}, {m: 6, d: 5}, {m: 6, d: 19},
-    {m: 7, d: 3}, {m: 7, d: 17}, {m: 7, d: 31}, {m: 8, d: 14}, {m: 8, d: 28}, {m: 9, d: 11},
-    {m: 9, d: 25}, {m: 10, d: 14}, {m: 10, d: 28}, {m: 11, d: 11}, {m: 11, d: 25}, {m: 12, d: 9}, {m: 12, d: 23}
-  ];
+  // ✅ 用函数动态返回颜色（最稳）
+  const C = {
+    bg: isDark ? '#000000' : '#F2F2F7',
+    txt: isDark ? '#FFFFFF' : '#000000',
+    sub: '#8E8E93',
+    line: isDark ? '#1C1C1E' : '#E5E5EA',
+    block: isDark ? '#1C1C1E' : '#FFFFFF',
+    accent: isDark ? '#FFD700' : '#FFB800'
+  };
 
   const now = new Date();
   const upTime = `${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
-  let nextDate = "待更新";
-  for (const item of CAL_2026) {
-    if (new Date(2026, item.m - 1, item.d, 23, 59) > now) {
-      nextDate = `${item.m}月${item.d}日`;
-      break;
-    }
-  }
+  let region = "成都";
+  let trend = "加载中...";
+  let trendCol = C.sub;
 
-  let region = "加载中", trend = "获取调价趋势...", trendCol = T.sub;
   let p = { p92: "--", p95: "--", p98: "--", diesel: "--" };
 
   try {
-    const reg = ctx.env.region || "sichuan/chengdu";
-    const res = await ctx.http.get(`http://m.qiyoujiage.com/${reg}.shtml`, { timeout: 4000 });
+    const res = await ctx.http.get("http://m.qiyoujiage.com/sichuan/chengdu.shtml", { timeout: 4000 });
     const html = await res.text();
-
-    const rName = html.match(/<title>([^_]+)_/);
-    if (rName) region = rName[1].replace(/(油价|实时|今日|最新|价格)/g, '');
 
     const regP = /<dl>[\s\S]+?<dt>(.*油)<\/dt>[\s\S]+?<dd>(.*)\(元\)<\/dd>/gm;
     let m;
@@ -49,53 +35,50 @@ export default async function (ctx) {
     }
 
     const tMatch = html.match(/<div class="tishi">[\s\S]*?<span>([^<]+)<\/span>[\s\S]*?<br\/>([\s\S]+?)<br\/>/);
+
     if (tMatch) {
-      const isUp = tMatch[2].includes("上调"), isDown = tMatch[2].includes("下调");
-      const d = tMatch[1].match(/(\d{1,2}月\d{1,2}日)/)?.[1] || "";
-      const amt = tMatch[2].match(/[\d\.]+\s*元\/升/g)?.[0] || "";
+      const isUp = tMatch[2].includes("上调");
+      const isDown = tMatch[2].includes("下调");
 
-      trend = `${d}${isUp?'上涨':isDown?'下调':'调价'} ${amt}`;
+      trend = tMatch[1];
 
-      trendCol = isUp
-        ? { light: '#FF3B30', dark: '#FF453A' }
-        : isDown
-        ? { light: '#34C759', dark: '#32D74B' }
-        : T.sub;
+      // ✅ 必须统一字符串
+      trendCol = isUp ? '#FF453A' : isDown ? '#32D74B' : C.sub;
     }
 
   } catch (e) {
-    region = "成都";
+    trend = "数据获取失败";
   }
 
   return {
     type: "widget",
     padding: [16, 16, 10, 16],
-    backgroundColor: T.bg,
+    backgroundColor: C.bg,
 
     children: [
-      { type: 'spacer', length: 5 },
+      { type: "text", text: `${region}油价`, textColor: C.txt },
 
-      // 头部
+      { type: "spacer", length: 10 },
+
       {
-        type: "stack", direction: "row", alignItems: "center",
-        children: [
-          { type: "image", src: "sf-symbol:fuelpump.fill", width: 16, height: 16, color: T.accent },
-          { type: 'spacer', length: 6 },
-          { type: "text", text: `${region}油价`, font: { size: 15, weight: "heavy" }, textColor: T.txt },
-          { type: "spacer" },
-          { type: "text", text: `下轮调价: ${nextDate}`, font: { size: 11, weight: "bold", family: "Menlo" }, textColor: T.sub }
-        ]
+        type: "text",
+        text: `92# ${p.p92}  95# ${p.p95}`,
+        textColor: C.txt
       },
 
-      { type: 'spacer', length: 12 },
-      { type: 'stack', height: 0.5, backgroundColor: T.line },
-      { type: 'spacer', length: 12 },
+      { type: "spacer" },
 
-      // 价格区
       {
-        type: "stack", direction: "row", gap: 8,
-        children: [
-          { label: "92#", val: p.p92, col: T.accent },
-          { label: "95#", val: p.p95, col: { light: '#FF6B35', dark: '#FF6B35' } },
-          { label: "98#", val: p.p98, col: { light: '#FF3B30', dark: '#FF453A' } },
-          { label: "柴油", val: p.diesel, col: { light: '#34C759', dark: '#32D74B' }
+        type: "text",
+        text: trend,
+        textColor: trendCol
+      },
+
+      {
+        type: "text",
+        text: upTime,
+        textColor: C.sub
+      }
+    ]
+  };
+}
