@@ -1,20 +1,17 @@
 /*
- * Crypto Price Widget - Egern Adaptive Pro Version
- * 布局完全遵循原版逻辑，仅优化间距（去挤）并适配纯黑白配色
+ * Crypto Price Widget - Egern Adaptive Pro
+ * 布局完全恢复原版（双列、卡片、多尺寸支持），仅配色去蓝，改为纯黑白自适应
  */
 
-// ===================== 1. 极致黑白自适应配色 =====================
-const THEME = {
-  bg: { light: '#FFFFFF', dark: '#000000' },     // 背景：纯白/纯黑
-  text: { light: '#1C1C1E', dark: '#FFFFFF' },   // 文字：纯黑/纯白
-  subText: { light: '#8E8E93', dark: '#8E8E93' },// 副文字：灰色
-  line: { light: '#E5E5EA', dark: '#1C1C1E' },   // 分隔线
-  accent: { light: '#FF9500', dark: '#FFD700' }, // 强调色
-  up: '#34C759',                                  // 涨
-  down: '#FF3B30',                                // 跌
+// --- 1. 统一定义自适应颜色对象 ---
+var THEME = {
+  bg: { light: '#FFFFFF', dark: '#000000' },
+  text: { light: '#000000', dark: '#FFFFFF' },
+  textSec: { light: '#8E8E93', dark: '#8E8E93' },
+  line: { light: '#E5E5EA', dark: '#1C1C1E' },
+  accent: { light: '#FF9500', dark: '#FFD700' }
 };
 
-// ===================== 2. 原版配置 (保持不变) =====================
 var COINS = "bitcoin,ethereum,solana,binancecoin,ripple,dogecoin,cardano,avalanche-2";
 var API_URL = "https://api.coingecko.com/api/v3/simple/price?ids=" + COINS + "&vs_currencies=usd&include_24hr_change=true";
 
@@ -31,140 +28,332 @@ var COIN_MAP = {
 
 var ALL_IDS = Object.keys(COIN_MAP);
 
-// ===================== 3. 辅助函数 (保持逻辑) =====================
 function formatPrice(price) {
   if (price >= 1000) return "$" + price.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return "$" + (price >= 1 ? price.toFixed(2) : price.toFixed(4));
-}
-function formatChange(change) {
-  return (change >= 0 ? "+" : "") + (change || 0).toFixed(1) + "%";
+  if (price >= 1) return "$" + price.toFixed(2);
+  return "$" + price.toFixed(4);
 }
 
-// ===================== 4. UI 组件 (优化间距 & 颜色) =====================
+function formatChange(change) {
+  if (change == null) return "+0.0%";
+  var sign = change >= 0 ? "+" : "";
+  return sign + change.toFixed(1) + "%";
+}
+
+function changeColor(change) {
+  return change >= 0 ? "#34C759" : "#FF3B30";
+}
+
+function changeIcon(change) {
+  return change >= 0 ? "arrow.up.right" : "arrow.down.right";
+}
+
+// --- DSL Builders (适配 THEME 颜色) ---
+
 function txt(text, fontSize, weight, color, opts) {
-  return {
-    type: "text", text: text,
+  var el = {
+    type: "text",
+    text: text,
     font: { weight: weight || "regular", size: fontSize, family: "Menlo" },
-    textColor: color || THEME.text,
-    ...(opts || {})
   };
+  el.textColor = color || THEME.text; // 改为自适应文字
+  if (opts) { for (var k in opts) el[k] = opts[k]; }
+  return el;
 }
 
 function icon(systemName, size, tintColor, opts) {
+  var el = {
+    type: "image",
+    src: "sf-symbol:" + systemName,
+    width: size,
+    height: size,
+  };
+  el.color = tintColor || THEME.text; // 改为自适应颜色
+  if (opts) { for (var k in opts) el[k] = opts[k]; }
+  return el;
+}
+
+function hstack(children, opts) {
+  var el = { type: "stack", direction: "row", alignItems: "center", children: children };
+  if (opts) { for (var k in opts) el[k] = opts[k]; }
+  return el;
+}
+
+function vstack(children, opts) {
+  var el = { type: "stack", direction: "column", alignItems: "start", children: children };
+  if (opts) { for (var k in opts) el[k] = opts[k]; }
+  return el;
+}
+
+function spacer(length) {
+  var el = { type: "spacer" };
+  if (length != null) el.length = length;
+  return el;
+}
+
+function dateTxt(dateStr, style, fontSize, weight, color) {
   return {
-    type: "image", src: "sf-symbol:" + systemName,
-    width: size, height: size, color: tintColor || THEME.text,
-    ...(opts || {})
+    type: "date",
+    date: dateStr,
+    format: style,
+    font: { size: fontSize, weight: weight || "medium" },
+    textColor: color || THEME.textSec, // 改为自适应副标题
   };
 }
 
-function hstack(children, opts) { return { type: "stack", direction: "row", alignItems: "center", children: children, ...(opts || {}) }; }
-function vstack(children, opts) { return { type: "stack", direction: "column", alignItems: "start", children: children, ...(opts || {}) }; }
-function spacer(length) { return { type: "spacer", length: length }; }
+function coinIcon(info, size) {
+  var pad = Math.round(size * 0.3);
+  var total = size + pad * 2;
+  return vstack([icon(info.icon, size, info.color)], {
+    alignItems: "center",
+    padding: [pad, pad, pad, pad],
+    backgroundColor: info.color + "33",
+    borderRadius: total / 2,
+  });
+}
+
+function cardGradient(color) {
+  return {
+    type: "linear",
+    colors: [color + "33", color + "11"], // 币种半透明渐变，无需变黑白
+    startPoint: { x: 0, y: 0 },
+    endPoint: { x: 1, y: 1 },
+  };
+}
+
+// --- Shared UI Components ---
 
 function separator() {
-  return hstack([spacer()], { height: 0.5, backgroundColor: THEME.line });
+  return hstack([spacer()], { height: 0.5, backgroundColor: THEME.line }); // 改为自适应分隔线
 }
 
 function headerBar(title, titleSize, iconSize, showTime) {
-  return hstack([
+  var children = [
     icon("chart.line.uptrend.xyaxis.circle.fill", iconSize, THEME.accent),
     txt(title, titleSize, "heavy", THEME.accent),
     spacer(),
-    showTime ? { type: "date", date: new Date().toISOString(), format: "time", font: { size: 10 }, textColor: THEME.subText } : spacer(0)
-  ], { gap: 6 });
+  ];
+  if (showTime) {
+    children.push(dateTxt(new Date().toISOString(), "time", Math.max(9, titleSize - 4), "medium", THEME.textSec));
+  }
+  return hstack(children, { gap: 4 });
 }
 
 function footerBar() {
   return hstack([
-    icon("clock.arrow.circlepath", 8, THEME.subText),
-    { type: "date", date: new Date().toISOString(), format: "relative", font: { size: 9 }, textColor: THEME.subText },
+    icon("clock.arrow.circlepath", 8, THEME.textSec),
+    dateTxt(new Date().toISOString(), "relative", 9, "medium", THEME.textSec),
     spacer(),
-    txt("PRO BOARD", 8, "heavy", THEME.subText),
-  ], { gap: 4 });
+    txt("CoinGecko", 8, "medium", THEME.textSec),
+  ], { gap: 3 });
 }
 
-// ===================== 5. 核心行组件 (优化视觉密度) =====================
+function sectionLabel(label) {
+  return txt(label, 10, "semibold", THEME.textSec);
+}
+
+// --- Row / Card Builders (还原原始结构) ---
+
+var CARD_PRESETS = {
+  small:  { layout: "column", iconSize: 14, priceSize: 15, symbolSize: 12, changeSize: 11, changeIconSize: 8,  borderRadius: 10, padding: [8, 10, 8, 10],   borderWidth: 0.5, nameSize: 0,  innerGap: 3 },
+  medium: { layout: "row",    iconSize: 20, priceSize: 18, symbolSize: 16, changeSize: 13, changeIconSize: 10, borderRadius: 14, padding: [10, 12, 10, 12], borderWidth: 1,   nameSize: 10, innerGap: 6 },
+  large:  { layout: "row",    iconSize: 26, priceSize: 24, symbolSize: 18, changeSize: 15, changeIconSize: 12, borderRadius: 14, padding: [14, 16, 14, 16], borderWidth: 1,   nameSize: 11, innerGap: 8 },
+};
+
+function coinCard(id, data, variant) {
+  var info = COIN_MAP[id];
+  var change = data.usd_24h_change;
+  var p = CARD_PRESETS[variant];
+
+  var changeRow = hstack([
+    icon(changeIcon(change), p.changeIconSize, changeColor(change)),
+    txt(formatChange(change), p.changeSize, "semibold", changeColor(change)),
+  ], { gap: 2 });
+
+  var cardOpts = {
+    gap: p.innerGap,
+    padding: p.padding,
+    backgroundGradient: cardGradient(info.color),
+    borderRadius: p.borderRadius,
+    borderWidth: p.borderWidth,
+    borderColor: info.color + "44",
+  };
+
+  if (p.layout === "column") {
+    return vstack([
+      hstack([coinIcon(info, p.iconSize), txt(info.symbol, p.symbolSize, "bold", THEME.text)], { gap: 4 }),
+      txt(formatPrice(data.usd), p.priceSize, "semibold", THEME.text, { minScale: 0.6, maxLines: 1 }),
+      changeRow,
+    ], cardOpts);
+  }
+
+  var nameItems = [txt(info.symbol, p.symbolSize, "heavy", THEME.text)];
+  if (p.nameSize) {
+    nameItems.push(txt(info.name, p.nameSize, "medium", THEME.textSec));
+  }
+
+  return vstack([
+    hstack([
+      coinIcon(info, p.iconSize),
+      vstack(nameItems, { gap: 0 }),
+      spacer(),
+      vstack([
+        txt(formatPrice(data.usd), p.priceSize, "bold", THEME.text),
+        changeRow,
+      ], { alignItems: "end", gap: 1 }),
+    ], { gap: p.innerGap }),
+  ], cardOpts);
+}
+
 function coinRow(id, data, compact) {
   var info = COIN_MAP[id];
   var change = data.usd_24h_change;
-  var color = change >= 0 ? THEME.up : THEME.down;
-  var sz = compact ? 12 : 14;
+  var sz = compact ? 11 : 13;
+  var iconSz = compact ? 11 : 14;
 
   return hstack([
-    vstack([icon(info.icon, sz, info.color)], { 
-      padding: [4, 4, 4, 4], backgroundColor: info.color + "22", borderRadius: 6 
-    }),
-    spacer(8), // 增加图标与文字间距
-    txt(info.symbol, sz, "bold", THEME.text),
+    coinIcon(info, iconSz),
+    txt(info.symbol, sz, "medium", THEME.text, { maxLines: 1 }),
     spacer(),
-    txt(formatPrice(data.usd), sz, "bold", THEME.text),
-    spacer(8),
-    txt(formatChange(change), sz - 1, "heavy", color)
-  ], { height: compact ? 26 : 30 }); // 增加行高，防止拥挤
+    txt(formatPrice(data.usd), sz, "semibold", THEME.text, { maxLines: 1, minScale: 0.7 }),
+    txt(formatChange(change), sz, "medium", changeColor(change)),
+  ], { gap: compact ? 4 : 6 });
 }
 
-// ===================== 6. 容器构建 (完全去蓝) =====================
-function systemWidget(padding, children) {
-  return {
+function rowGroup(items, gap) {
+  return vstack(items, { gap: gap || 6 });
+}
+
+function filterAvailable(ids, prices) {
+  return ids.filter(function (id) { return prices[id]; });
+}
+
+// --- System Widget Shell (去蓝配色) ---
+
+function systemWidget(padding, children, extraOpts) {
+  var opts = {
     type: "widget",
-    backgroundColor: THEME.bg, // 纯黑白背景
-    padding: padding || 15,
-    children: children
+    gap: 0,
+    padding: padding,
+    backgroundColor: THEME.bg, // 核心：背景改为纯色黑白自适应
+    children: children,
   };
+  if (extraOpts) { for (var k in extraOpts) opts[k] = extraOpts[k]; }
+  return opts;
+}
+
+function systemBody(title, titleSize, iconSize, bodyChildren) {
+  return [
+    headerBar(title, titleSize, iconSize, true),
+    spacer(6),
+    separator(),
+    spacer(),
+  ].concat(bodyChildren).concat([
+    spacer(),
+    footerBar(),
+  ]);
+}
+
+// --- Layout Builders (全部还原：双列、卡片、列表) ---
+
+function buildSystemSmall(prices) {
+  var rows = filterAvailable(["bitcoin", "ethereum", "solana", "binancecoin"], prices)
+    .map(function (id) { return coinRow(id, prices[id], true); });
+
+  return systemWidget(
+    [12, 14, 10, 14],
+    systemBody("Crypto", 13, 14, [
+      rowGroup(rows, 6),
+    ])
+  );
 }
 
 function buildSystemMedium(prices) {
-  var ids = ALL_IDS.filter(id => prices[id]);
-  var left = ids.slice(0, 4).map(id => coinRow(id, prices[id], true));
-  var right = ids.slice(4, 8).map(id => coinRow(id, prices[id], true));
+  var ids = filterAvailable(ALL_IDS, prices);
+  var left = ids.slice(0, 4).map(function (id) { return coinRow(id, prices[id], true); });
+  var right = ids.slice(4).map(function (id) { return coinRow(id, prices[id], true); });
 
-  return systemWidget(15, [
-    headerBar("Crypto Market", 14, 16, true),
-    spacer(10), // 增加头部间距
-    separator(),
-    spacer(12), // 增加分隔线后的空隙
-    hstack([
-      vstack(left, { gap: 8, flex: 1 }), // 关键：行间距从 5 改为 8
-      spacer(15),
-      vstack(right, { gap: 8, flex: 1 }),
-    ], { alignItems: "start" }),
-    spacer(),
-    footerBar()
-  ]);
+  // 这里就是你要求的横向布局（左右双列）
+  return systemWidget(
+    [12, 14, 10, 14],
+    systemBody("Crypto Tracker", 14, 18, [
+      hstack([
+        rowGroup(left, 5),
+        vstack([], { width: 0.5, height: 100, backgroundColor: THEME.line }),
+        rowGroup(right, 5),
+      ], { alignItems: "start", gap: 10 }),
+    ])
+  );
 }
 
-function buildSystemSmall(prices) {
-  var rows = ALL_IDS.slice(0, 4)
-    .filter(id => prices[id])
-    .map(id => coinRow(id, prices[id], true));
+function buildSystemLarge(prices) {
+  var featured = filterAvailable(["bitcoin", "ethereum"], prices)
+    .map(function (id) { return coinCard(id, prices[id], "medium"); });
 
-  return systemWidget(15, [
-    headerBar("Crypto", 14, 16, false),
-    spacer(10),
-    separator(),
-    spacer(10),
-    vstack(rows, { gap: 8 }),
-    spacer(),
-    footerBar()
-  ]);
+  var restIds = ALL_IDS.filter(function (id) { return id !== "bitcoin" && id !== "ethereum"; });
+  var rows = filterAvailable(restIds, prices)
+    .map(function (id) { return coinRow(id, prices[id], true); });
+
+  return systemWidget(
+    [12, 14, 10, 14],
+    systemBody("Crypto Tracker", 16, 20, [
+      rowGroup(featured, 8),
+      spacer(),
+      sectionLabel("MARKET"),
+      spacer(4),
+      rowGroup(rows, 6),
+    ])
+  );
 }
 
-// ===================== 7. 渲染入口 (保持逻辑) =====================
+function buildSystemExtraLarge(prices) {
+  var featured = filterAvailable(["bitcoin", "ethereum", "solana"], prices)
+    .map(function (id) { return coinCard(id, prices[id], "large"); });
+
+  var restIds = ALL_IDS.filter(function (id) {
+    return id !== "bitcoin" && id !== "ethereum" && id !== "solana";
+  });
+  var restCards = filterAvailable(restIds, prices)
+    .map(function (id) { return coinCard(id, prices[id], "small"); });
+
+  return systemWidget(
+    [14, 16, 12, 16],
+    systemBody("Crypto Tracker", 20, 24, [
+      hstack(featured, { gap: 10 }),
+      spacer(),
+      sectionLabel("MARKET"),
+      spacer(4),
+      hstack(restCards, { gap: 8 }),
+    ])
+  );
+}
+
+// --- 其余配件及渲染逻辑 (完全保留) ---
+
+var BUILDERS = {
+  systemSmall:          buildSystemSmall,
+  systemMedium:         buildSystemMedium,
+  systemLarge:          buildSystemLarge,
+  systemExtraLarge:     buildSystemExtraLarge,
+};
+
+function render(prices, family) {
+  var build = BUILDERS[family] || buildSystemMedium;
+  var widget = build(prices);
+  widget.refreshAfter = new Date(Date.now() + 60 * 1000).toISOString();
+  return widget;
+}
+
 export default async function(ctx) {
-  var family = ctx.widgetFamily || "systemMedium";
-  
+  var family = ctx.widgetFamily;
   try {
     var resp = await ctx.http.get(API_URL);
     var prices = await resp.json();
-    
-    if (family === "systemSmall") return buildSystemSmall(prices);
-    return buildSystemMedium(prices);
-    
+    return render(prices, family);
   } catch (e) {
     return {
-      type: "widget", backgroundColor: THEME.bg,
-      children: [txt("Network Error", 12, "medium", THEME.down)]
+      type: "widget", padding: 16, backgroundColor: THEME.bg,
+      children: [txt("Failed to load prices", 14, "medium", "#FF3B30")]
     };
   }
 }
