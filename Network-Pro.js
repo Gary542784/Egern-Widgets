@@ -1,19 +1,21 @@
 /**
- * 🚀 全功能网络看板 Pro (Wstd 像素级统一字号渐变版)
+ * 🚀 全功能网络看板 Pro (彻底修复 iOS 深浅自适应 纯色版)
  * 集成：双 IP 检测、网络类型、真实延迟、流媒体解锁 (NF/GPT/TK/GMNI/D+)、IP 纯净度
  */
 export default async function(ctx) {
-  // ===================== Wstd 样式常量 =====================
-  const BG_COLORS = [{ light: '#0D0D1A', dark: '#0D0D1A' }, { light: '#2D1B69', dark: '#2D1B69' }];
-  const C_TITLE   = { light: '#FFD700', dark: '#FFD700' }; 
-  const C_SUB     = { light: '#A2A2B5', dark: '#A2A2B5' }; 
-  const C_GREEN   = { light: '#32D74B', dark: '#32D74B' }; 
-  const C_MAIN    = { light: '#FFFFFF', dark: '#FFFFFF' }; 
-  const C_YELLOW  = { light: '#FFD60A', dark: '#FFD60A' };
-  const C_RED     = { light: '#FF3B30', dark: '#FF3B30' };
+  // ===================== iOS 深浅自适应颜色常量 =====================
+  // 弃用 backgroundGradient，改用系统原生支持完美的纯色 backgroundColor
+  const BG_MAIN   = { light: '#FFFFFF', dark: '#0D0D1A' }; // 浅色纯白，深色黑紫
+  const C_MAIN    = { light: '#1C1C1E', dark: '#FFFFFF' }; // 浅色黑，深色白
+  const C_SUB     = { light: '#8E8E93', dark: '#A2A2B5' }; // 浅色灰，深色透白
   
-  const IC_BLUE   = { light: '#00AAE4', dark: '#00AAE4' }; 
-  const IC_PURPLE = { light: '#9945FF', dark: '#9945FF' }; 
+  const C_TITLE   = { light: '#FF9500', dark: '#FFD700' }; // 浅色橙，深色金
+  const C_GREEN   = { light: '#34C759', dark: '#32D74B' }; // iOS 绿
+  const C_YELLOW  = { light: '#FFCC00', dark: '#FFD60A' }; // iOS 黄
+  const C_RED     = { light: '#FF3B30', dark: '#FF3B30' }; // iOS 红
+  
+  const IC_BLUE   = { light: '#007AFF', dark: '#00AAE4' }; // 浅色原生蓝，深色亮蓝
+  const IC_PURPLE = { light: '#AF52DE', dark: '#9945FF' }; // 浅色原生紫，深色亮紫
 
   // ===================== 辅助函数 =====================
   const fmtISP = (isp) => {
@@ -85,7 +87,6 @@ export default async function(ctx) {
   const globalStart = Date.now();
   let realTcpDelay = 0;
 
-  // 💡 使用 Google 官方 204 探针，测速更准、更纯粹
   const [pingTask, lResRaw, nResRaw, pureResRaw, ...unlockResults] = await Promise.all([
     ctx.http.get("http://connectivitycheck.gstatic.com/generate_204", { timeout: 2000 })
       .then(() => { realTcpDelay = Date.now() - globalStart; }).catch(() => {}),
@@ -159,7 +160,8 @@ export default async function(ctx) {
   return {
     type: 'widget', 
     padding: 14,
-    backgroundGradient: { type: 'linear', colors: BG_COLORS, startPoint: { x: 0, y: 0 }, endPoint: { x: 1, y: 1 } },
+    // ✨ 移除 backgroundGradient，改用系统原生完美支持的纯色 backgroundColor
+    backgroundColor: BG_MAIN,
     refreshPolicy: { onNetworkChange: true, onEnter: true, timeout: 10 },
     children: [
       { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
