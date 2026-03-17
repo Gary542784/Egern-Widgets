@@ -1,7 +1,7 @@
 /**
- * ⛽ 全国油价（自适应黑白 Pro 版 - 完整信息修复）
+ * ⛽ 全国油价（自适应黑白 Pro 版 - 完整信息找回）
  * ✨ 视觉规范：对齐 Crypto 看板 Pro 风格
- * 🛠 修复内容：找回了被删掉的“调价具体日期”显示
+ * 🛠 修复：找回丢失的“下轮调价具体日期”和底部的“本轮调价日期”
  */
 
 export default async function (ctx) {
@@ -37,7 +37,12 @@ export default async function (ctx) {
       if (target > now) {
         const diffMs = target - now;
         const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
-        return { dateStr: `${item.m}月${item.d}日`, countdown: `${Math.floor(totalHours / 24)}天${totalHours % 24}h`, isUrgent: totalHours < 72 };
+        // 这里保留完整的 dateStr
+        return { 
+          dateStr: `${item.m}月${item.d}日`, 
+          countdown: `${Math.floor(totalHours / 24)}天${totalHours % 24}h`, 
+          isUrgent: totalHours < 72 
+        };
       }
     }
     return { dateStr: "待更新", countdown: "", isUrgent: false };
@@ -67,14 +72,12 @@ export default async function (ctx) {
       if (m[1].includes("柴") || m[1].includes("0号")) prices.diesel = val;
     }
     
-    // ✨ 找回被删掉的日期解析逻辑
     if (SHOW_TREND) {
       const trendMatch = html.match(/<div class="tishi">[\s\S]*?<span>([^<]+)<\/span>[\s\S]*?<br\/>([\s\S]+?)<br\/>/);
       if (trendMatch) {
         const timeText = trendMatch[1];
         const priceText = trendMatch[2];
         
-        // 解析最近一次调价日期（如 3月9日）
         let adjustDate = timeText.match(/(\d{1,2}月\d{1,2}日)/)?.[1] || "";
         const isUp = priceText.includes("上调");
         const isDown = priceText.includes("下调");
@@ -83,7 +86,6 @@ export default async function (ctx) {
         const allPrices = priceText.match(/[\d\.]+\s*元\/升/g);
         let amount = allPrices && allPrices.length > 0 ? (allPrices.length >= 2 ? `${allPrices[0].match(/[\d\.]+/)[0]}-${allPrices[1].match(/[\d\.]+/)[0]}元/L` : `${allPrices[0].match(/[\d\.]+/)[0]}元/L`) : "";
         
-        // ✨ 重新组合完整的调价信息，包含日期
         trendInfo = `${adjustDate}${isUp?'上涨':isDown?'下调':'调价'} ${amount}`;
       }
     }
@@ -101,6 +103,7 @@ export default async function (ctx) {
     backgroundColor: THEME.bg,
     children: [
       { type: 'spacer', length: 5 },
+      // 头部逻辑：找回了 ${nextAdjust.dateStr}
       {
         type: "stack", direction: "row", alignItems: "center",
         children: [
@@ -108,13 +111,14 @@ export default async function (ctx) {
           { type: 'spacer', length: 6 },
           { type: "text", text: `${regionName || "成都"}油价`, font: { size: 15, weight: "heavy" }, textColor: THEME.text },
           { type: "spacer" }, 
-          { type: "text", text: `调价:${nextAdjust.countdown}`, font: { size: 11, weight: "bold", family: "Menlo" }, textColor: countdownColor }
+          { type: "text", text: `下轮: ${nextAdjust.dateStr} (${nextAdjust.countdown})`, font: { size: 11, weight: "bold", family: "Menlo" }, textColor: countdownColor }
         ]
       },
       { type: 'spacer', length: 12 },
       { type: 'stack', height: 0.5, backgroundColor: THEME.line },
       { type: 'spacer', length: 12 },
 
+      // 数值区块
       {
         type: "stack", direction: "row", gap: 8,
         children: priceItems.map(row => ({
@@ -129,6 +133,7 @@ export default async function (ctx) {
 
       { type: 'spacer', length: 14 },
       
+      // 底部逻辑：日期 + 趋势
       {
         type: "stack", direction: "row", alignItems: "center",
         children: [
@@ -137,7 +142,6 @@ export default async function (ctx) {
               { type: "text", text: updateTimeStr, font: { size: 10, family: "Menlo" }, textColor: THEME.textSec }
           ]},
           { type: "spacer" },
-          // ✨ 这里会显示如 "3月9日下调 0.12元/L"
           { type: "text", text: trendInfo, font: { size: 10, weight: "bold" }, textColor: trendColor, lineLimit: 1, minScale: 0.5 }
         ]
       },
