@@ -1,6 +1,6 @@
 /*
- * Crypto Price Widget - 彻底修复 iOS 深浅自适应 纯色版
- * 获取主流加密货币实时价格，自动适配日间/夜间模式
+ * Crypto Price Widget - 终极修复 iOS 深浅自适应 纯色版
+ * 获取主流加密货币实时价格，利用系统原生对象实现 0 延迟秒切
  */
 
 const COINS = "bitcoin,ethereum,solana,binancecoin,ripple,dogecoin,cardano,avalanche-2";
@@ -33,19 +33,16 @@ function saveCache(ctx, prices) {
 }
 
 export default async function(ctx) {
-  // ✨ 核心：环境探针，精准抓取 iOS 深浅模式
-  const isDark = ctx?.device?.colorScheme === 'dark';
-
-  // 🎨 iOS 深浅自适应原生颜色配置
-  const BG_MAIN    = isDark ? '#0D0D1A' : '#FFFFFF'; // 深色黑紫，浅色纯白
-  const TEXT_MAIN  = isDark ? '#FFFFFF' : '#1C1C1E'; // 深色纯白，浅色纯黑
-  const TEXT_SUB   = isDark ? '#EBEBF5' : '#8E8E93'; // 副标题
-  const TEXT_MUTED = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'; // 弱化文本
-  const DIVIDER    = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'; // 分割线
+  // ✨ 完全放弃 JS 判断，全部采用 iOS 原生动态颜色对象
+  const BG_MAIN    = { light: '#FFFFFF', dark: '#0D0D1A' }; 
+  const TEXT_MAIN  = { light: '#1C1C1E', dark: '#FFFFFF' }; 
+  const TEXT_SUB   = { light: '#8E8E93', dark: '#EBEBF5' }; 
+  const TEXT_MUTED = { light: 'rgba(0,0,0,0.3)', dark: 'rgba(255,255,255,0.3)' }; 
+  const DIVIDER    = { light: 'rgba(0,0,0,0.05)', dark: 'rgba(255,255,255,0.1)' }; 
   
-  const C_GREEN    = isDark ? '#32D74B' : '#34C759'; // 涨 (iOS 绿)
-  const C_RED      = isDark ? '#FF453A' : '#FF3B30'; // 跌 (iOS 红)
-  const C_GOLD     = isDark ? '#FFD700' : '#FF9500'; // 标题强调色
+  const C_GREEN    = { light: '#34C759', dark: '#32D74B' }; 
+  const C_RED      = { light: '#FF3B30', dark: '#FF453A' }; 
+  const C_GOLD     = { light: '#FF9500', dark: '#FFD700' }; 
 
   // --- 基础数据格式化 ---
   function formatPrice(price) {
@@ -69,6 +66,7 @@ export default async function(ctx) {
   }
 
   // --- DSL UI 构造器 ---
+  // 注意：所有传入颜色参数的地方，现在都可以直接接收 { light, dark } 对象
   function txt(text, fontSize, weight, color, opts) {
     const el = {
       type: "text",
@@ -120,13 +118,27 @@ export default async function(ctx) {
     };
   }
 
+  // 这里的背景透明度采用简单的 rgba 组合
+  // 为了确保正确解析，我们直接写死两个包含 rgba 的颜色对象
   function coinIcon(info, size) {
     const pad = Math.round(size * 0.3);
     const total = size + pad * 2;
+    // 将原有的 HEX 颜色转换为 RGBA 对象
+    const hexToRgba = (hex, alpha) => {
+        let r = parseInt(hex.slice(1, 3), 16),
+            g = parseInt(hex.slice(3, 5), 16),
+            b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r},${g},${b},${alpha})`;
+    };
+    const iconBgColor = { 
+        light: hexToRgba(info.color, 0.15), 
+        dark: hexToRgba(info.color, 0.2) 
+    };
+
     return vstack([icon(info.icon, size, info.color)], {
       alignItems: "center",
       padding: [pad, pad, pad, pad],
-      backgroundColor: info.color + (isDark ? "33" : "22"),
+      backgroundColor: iconBgColor,
       borderRadius: total / 2,
     });
   }
@@ -139,11 +151,7 @@ export default async function(ctx) {
   function headerBar(title, titleSize, iconSize, showTime) {
     const children = [
       icon("chart.line.uptrend.xyaxis.circle.fill", iconSize, C_GOLD),
-      txt(title, titleSize, "heavy", C_GOLD, {
-        shadowColor: isDark ? "rgba(255,215,0,0.3)" : "rgba(255,149,0,0.2)",
-        shadowRadius: 4,
-        shadowOffset: { x: 0, y: 0 },
-      }),
+      txt(title, titleSize, "heavy", C_GOLD),
       spacer(),
     ];
     if (showTime) {
@@ -182,13 +190,21 @@ export default async function(ctx) {
       txt(formatChange(change), p.changeSize, "semibold", changeColor(change)),
     ], { gap: 2 });
 
+    const hexToRgba = (hex, alpha) => {
+        let r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r},${g},${b},${alpha})`;
+    };
+
     const cardOpts = {
       gap: p.innerGap,
       padding: p.padding,
-      backgroundColor: info.color + (isDark ? "22" : "15"), // 动态适应深浅背景透明度
+      backgroundColor: { light: hexToRgba(info.color, 0.08), dark: hexToRgba(info.color, 0.15) },
       borderRadius: p.borderRadius,
       borderWidth: p.borderWidth,
-      borderColor: info.color + (p.borderWidth >= 1 ? (isDark ? "55" : "33") : (isDark ? "44" : "22")),
+      borderColor: { 
+          light: p.borderWidth >= 1 ? hexToRgba(info.color, 0.2) : hexToRgba(info.color, 0.15), 
+          dark: p.borderWidth >= 1 ? hexToRgba(info.color, 0.3) : hexToRgba(info.color, 0.2) 
+      },
     };
 
     if (p.layout === "column") {
@@ -246,7 +262,7 @@ export default async function(ctx) {
       type: "widget",
       gap: 0,
       padding: padding,
-      backgroundColor: BG_MAIN, // 彻底拥抱原生纯色
+      backgroundColor: BG_MAIN, // ✨ 核心：原生对象传递
       children: children,
     };
     if (extraOpts) { for (let k in extraOpts) opts[k] = opts[k] || extraOpts[k]; }
