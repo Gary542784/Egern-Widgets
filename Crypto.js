@@ -1,6 +1,6 @@
 /**
- * 🚀 Crypto Price Widget (像素级对齐 + 真·自适应版)
- * 彻底修复排版偏移与分割线 Bug，支持深浅模式秒切
+ * 🚀 Crypto Price Widget (真·系统自适应 像素级对齐版)
+ * 100% 采用 BWH 流量监控面板的底色与逻辑，彻底解决变色与对齐问题
  */
 
 const COINS = "bitcoin,ethereum,solana,binancecoin,ripple,dogecoin,cardano,avalanche-2";
@@ -17,10 +17,8 @@ const COIN_MAP = {
   "avalanche-2":{ symbol: "AVAX", icon: "triangle.fill",            color: "#E84142" },
 };
 
-const CACHE_KEY = "crypto_prices_cache";
-
 export default async function(ctx) {
-  // 🎨 纯正的原生自适应颜色对象
+  // 🎨 搬瓦工同款原生动态颜色 (实现秒切，绝不写死)
   const BG_MAIN    = { light: '#FFFFFF', dark: '#0D0D1A' }; 
   const TEXT_MAIN  = { light: '#1C1C1E', dark: '#FFFFFF' }; 
   const TEXT_SUB   = { light: '#8E8E93', dark: '#EBEBF5' }; 
@@ -33,7 +31,7 @@ export default async function(ctx) {
   const formatPrice = (p) => p >= 1000 ? "$" + p.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",") : (p >= 1 ? "$" + p.toFixed(2) : "$" + p.toFixed(4));
   const formatChange = (c) => (c >= 0 ? "+" : "") + (c || 0).toFixed(1) + "%";
 
-  // --- 列表行渲染 (优化对齐与间距) ---
+  // --- 列表行渲染 (模仿 BWH 紧凑排版) ---
   const coinRow = (id, data) => {
     const info = COIN_MAP[id];
     const change = data.usd_24h_change;
@@ -41,14 +39,14 @@ export default async function(ctx) {
       type: "stack",
       direction: "row",
       alignItems: "center",
-      gap: 8,
+      gap: 6,
       children: [
         {
           type: "stack",
           padding: 4,
           backgroundColor: info.color + "22", 
-          borderRadius: 8,
-          children: [{ type: "image", src: "sf-symbol:" + info.icon, width: 13, height: 13, color: info.color }]
+          borderRadius: 6,
+          children: [{ type: "image", src: "sf-symbol:" + info.icon, width: 12, height: 12, color: info.color }]
         },
         { type: "text", text: info.symbol, font: { size: 12, weight: "bold", family: "Menlo" }, textColor: TEXT_MAIN },
         { type: "spacer" },
@@ -57,7 +55,7 @@ export default async function(ctx) {
           direction: "column",
           alignItems: "end",
           children: [
-            { type: "text", text: formatPrice(data.usd), font: { size: 12, weight: "bold", family: "Menlo" }, textColor: TEXT_MAIN },
+            { type: "text", text: formatPrice(data.usd), font: { size: 11, weight: "bold", family: "Menlo" }, textColor: TEXT_MAIN },
             { type: "text", text: formatChange(change), font: { size: 10, weight: "bold", family: "Menlo" }, textColor: change >= 0 ? C_GREEN : C_RED }
           ]
         }
@@ -65,21 +63,21 @@ export default async function(ctx) {
     };
   };
 
-  // --- 获取数据 ---
+  // --- 数据处理 ---
   let prices;
   try {
     const resp = await ctx.http.get(API_URL);
     prices = await resp.json();
-    ctx.storage.setJSON(CACHE_KEY, { ts: Date.now(), prices: prices });
+    ctx.storage.setJSON("crypto_cache", { ts: Date.now(), prices: prices });
   } catch (e) {
-    const cached = ctx.storage.getJSON(CACHE_KEY);
-    prices = cached ? cached.prices : null;
-    if (!prices) return { type: "widget", backgroundColor: BG_MAIN, children: [{ type: "text", text: "Error" }] };
+    const cached = ctx.storage.getJSON("crypto_cache");
+    if (!cached) return { type: "widget", backgroundColor: BG_MAIN, children: [{ type: "text", text: "Error" }] };
+    prices = cached.prices;
   }
 
   const ids = Object.keys(prices).filter(id => COIN_MAP[id]);
-  const family = ctx.widgetFamily || "systemMedium";
   const rows = ids.slice(0, 8).map(id => coinRow(id, prices[id]));
+  const family = ctx.widgetFamily || "systemMedium";
 
   return {
     type: "widget",
@@ -87,7 +85,7 @@ export default async function(ctx) {
     backgroundColor: BG_MAIN,
     refreshPolicy: { onEnter: true, timeout: 60 },
     children: [
-      // 头部栏
+      // 头部栏 (完全照搬 BWH 标题逻辑)
       {
         type: "stack",
         direction: "row",
@@ -101,27 +99,24 @@ export default async function(ctx) {
         ]
       },
       { type: "spacer", length: 10 },
-      // 顶部全宽分割线
+      // 搬瓦工同款分割线
       { type: "stack", height: 1, backgroundColor: LINE_COLOR },
       { type: "spacer", length: 12 },
-      // 列表主体 (通过 flex: 1 强制左右对齐)
+      
+      // 列表主体 (两列式等宽排版)
       family === "systemMedium" ? {
         type: "stack",
         direction: "row",
         gap: 16,
         children: [
           { type: "stack", direction: "column", gap: 8, flex: 1, children: rows.slice(0, 4) },
-          // 中间竖线：增加上下 padding，防止顶天立地，更有呼吸感
-          { 
-            type: "stack", 
-            width: 1, 
-            backgroundColor: LINE_COLOR, 
-            marginTop: 4, 
-            marginBottom: 4 
-          },
+          // 中间竖线加了 padding 避免撞横线
+          { type: "stack", width: 1, backgroundColor: LINE_COLOR, marginTop: 4, marginBottom: 4 },
           { type: "stack", direction: "column", gap: 8, flex: 1, children: rows.slice(4, 8) }
         ]
-      } : { type: "stack", direction: "column", gap: 8, children: rows.slice(0, 4) },
+      } : { 
+        type: "stack", direction: "column", gap: 8, children: rows.slice(0, 4) 
+      },
       { type: "spacer" }
     ]
   };
