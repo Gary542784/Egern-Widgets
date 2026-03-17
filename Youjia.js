@@ -1,29 +1,25 @@
 /**
- * ==========================================
- * 📌 代码名称: ⛽ 全国油价（默认成都）小组件
- * ✨ 特色功能: 实时获取国内油价及涨跌趋势，精准倒数下轮调价窗口。(已替换为 Crypto 极客深紫配色 + 荧光标题)
- * 🔗 引用链接: https://raw.githubusercontent.com/jnlaoshu/MySelf/master/Egern/Widget/GasPrice.js
- * ⏱️ 更新时间: 2026-03-15
- * ==========================================
+ * ⛽ 全国油价（自适应黑白 Pro 版）
+ * ✨ 视觉规范：完全对齐 Crypto 看板 Pro 风格
  */
 
 export default async function (ctx) {
+  // ===================== 极致自适应色板 =====================
+  const THEME = {
+    bg: { light: '#FFFFFF', dark: '#000000' },     // 纯白/纯黑背景
+    text: { light: '#000000', dark: '#FFFFFF' },   // 主文字
+    textSec: { light: '#8E8E93', dark: '#8E8E93' },// 副文字
+    line: { light: '#E5E5EA', dark: '#1C1C1E' },   // 分隔线
+    accent: { light: '#FF9500', dark: '#FFD700' }, // 强调橙/金
+    block: { light: '#F2F2F7', dark: '#1C1C1E' },  // 数值区块背景
+    green: { light: '#34C759', dark: '#32D74B' },
+    red: { light: '#FF3B30', dark: '#FF453A' }
+  };
+
   const regionParam = ctx.env.region || "sichuan/chengdu"; 
   const SHOW_TREND = (ctx.env.SHOW_TREND || "true").trim() !== "false";
 
-  // ✨ 替换为 Crypto 极客渐变背景 (深色星空紫)
-  const BG_COLORS = [
-    { light: '#0D0D1A', dark: '#0D0D1A' },
-    { light: '#2D1B69', dark: '#2D1B69' }
-  ];
-  // ✨ 油价区块的背景色，改为半透明，适配深紫背景
-  const BLOCK_BG = { light: '#FFFFFF15', dark: '#FFFFFF15' }; // 使用安全的十六进制透明度
-  
-  // ✨ 颜色定义
-  const TEXT_MAIN = { light: '#FFFFFF', dark: '#FFFFFF' };
-  const TEXT_SUB = { light: '#EBEBF5', dark: '#EBEBF5' };
-  const TITLE_COLOR = { light: '#00E5FF', dark: '#00E5FF' }; // 🚀 新增：赛博荧光青，专用于主标题
-
+  // ===================== 调价历法 & 逻辑 =====================
   const CALENDAR_2026 = [
     {m: 1, d: 12}, {m: 1, d: 23}, {m: 2, d: 9},  {m: 2, d: 23}, {m: 3, d: 9},  {m: 3, d: 23}, {m: 4, d: 7},  {m: 4, d: 21}, 
     {m: 5, d: 8},  {m: 5, d: 22}, {m: 6, d: 5},  {m: 6, d: 19}, {m: 7, d: 3},  {m: 7, d: 17}, {m: 7, d: 31}, {m: 8, d: 14}, 
@@ -40,19 +36,19 @@ export default async function (ctx) {
       if (target > now) {
         const diffMs = target - now;
         const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
-        return { dateStr: `${item.m}月${item.d}日24时`, countdown: `${Math.floor(totalHours / 24)}天${totalHours % 24}h后`, isUrgent: totalHours < 72 };
+        return { dateStr: `${item.m}月${item.d}日`, countdown: `${Math.floor(totalHours / 24)}天${totalHours % 24}h`, isUrgent: totalHours < 72 };
       }
     }
     return { dateStr: "待更新", countdown: "", isUrgent: false };
   };
 
   const nextAdjust = getNextAdjust();
-  const infoColor = nextAdjust.isUrgent ? { light: '#FF453A', dark: '#FF453A' } : { light: '#0A84FF', dark: '#0A84FF' };
+  const countdownColor = nextAdjust.isUrgent ? THEME.red : THEME.textSec;
   
   let prices = { p92: null, p95: null, p98: null, diesel: null };
   let regionName = "";
   let trendInfo = "暂无数据";
-  let trendColor = TEXT_SUB; 
+  let trendColor = THEME.textSec; 
 
   try {
     const resp = await ctx.http.get(`http://m.qiyoujiage.com/${regionParam}.shtml`, { timeout: 10000 });
@@ -73,74 +69,69 @@ export default async function (ctx) {
     if (SHOW_TREND) {
       const trendMatch = html.match(/<div class="tishi">[\s\S]*?<span>([^<]+)<\/span>[\s\S]*?<br\/>([\s\S]+?)<br\/>/);
       if (trendMatch) {
-        const timeText = trendMatch[1];
         const priceText = trendMatch[2];
-        let adjustDate = timeText.match(/(\d{1,2}月\d{1,2}日\d{1,2}时)/)?.[1] || timeText.split('价')[1]?.replace(/起.*/, '') || "未知时间";
         const isUp = priceText.includes("上调");
         const isDown = priceText.includes("下调");
-        const trendIcon = isUp ? "↑" : (isDown ? "↓" : "-");
-        // 涨跌颜色调整为适应深色背景的高饱和度颜色
-        trendColor = isUp ? { light: '#FF453A', dark: '#FF453A' } : (isDown ? { light: '#32D74B', dark: '#32D74B' } : TEXT_SUB);
-
+        trendColor = isUp ? THEME.red : (isDown ? THEME.green : THEME.textSec);
         const allPrices = priceText.match(/[\d\.]+\s*元\/升/g);
         let amount = allPrices && allPrices.length > 0 ? (allPrices.length >= 2 ? `${allPrices[0].match(/[\d\.]+/)[0]}-${allPrices[1].match(/[\d\.]+/)[0]}元/L` : `${allPrices[0].match(/[\d\.]+/)[0]}元/L`) : "";
-        trendInfo = `${adjustDate}, ${trendIcon} ${amount}`.trim();
+        trendInfo = `${isUp?'上涨':isDown?'下跌':'调价'} ${amount}`;
       }
     }
   } catch (e) { console.log("获取油价失败", e); }
 
   const priceItems = [
-    // 油号颜色稍微提亮，适应深色背景
-    { label: "92号", val: prices.p92, color: { light: '#FFD60A', dark: '#FFD60A' } }, 
-    { label: "95号", val: prices.p95, color: { light: '#FF6B35', dark: '#FF6B35' } },
-    { label: "98号", val: prices.p98, color: { light: '#FF453A', dark: '#FF453A' } },
-    { label: "柴油", val: prices.diesel, color: { light: '#32D74B', dark: '#32D74B' } }
+    { label: "92#", val: prices.p92, color: THEME.accent }, 
+    { label: "95#", val: prices.p95, color: "#FF6B35" },
+    { label: "98#", val: prices.p98, color: THEME.red },
+    { label: "柴油", val: prices.diesel, color: THEME.green }
   ].filter(i => i.val);
 
+  // ===================== 渲染布局 =====================
   return {
     type: "widget", padding: 16,
-    backgroundGradient: { type: 'linear', colors: BG_COLORS, startPoint: { x: 0, y: 0 }, endPoint: { x: 1, y: 1 } },
+    backgroundColor: THEME.bg, // 纯黑白自适应背景
     children: [
-      { type: 'spacer', length: 10 },
-      {
-        type: "stack", direction: "row",
-        children: [
-          {
-            type: "stack", direction: "row", alignItems: "center", gap: 8,
-            children: [
-              // ✨ 这里的图标和文字都应用了 TITLE_COLOR 并且加粗为 heavy
-              { type: "image", src: "sf-symbol:fuelpump.fill", width: 18, height: 18, color: TITLE_COLOR },
-              { type: "text", text: `${regionName || "获取中"}油价`, font: { size: 17, weight: "heavy" }, textColor: TITLE_COLOR }
-            ]
-          },
-          { type: "spacer" }, 
-          { type: "text", text: `下轮调价: ${nextAdjust.dateStr} , ${nextAdjust.countdown}`, font: { size: 12, weight: "bold" }, textColor: infoColor, textAlign: "right", lineLimit: 1, minScale: 0.5 }
-        ]
-      },
-      { type: 'spacer', length: 14 },
-      {
-        type: "stack", direction: "row", gap: 8,
-        children: priceItems.map(row => ({
-          type: "stack", direction: "column", alignItems: "center", flex: 1, padding: [10, 0], backgroundColor: BLOCK_BG, borderRadius: 12,
-          children: [
-            { type: "text", text: row.label, font: { size: 10, weight: "bold" }, textColor: row.color },
-            { type: "text", text: row.val?.toFixed(2) || "--", font: { size: 18, weight: "bold", family: "Menlo" }, textColor: TEXT_MAIN }
-          ]
-        }))
-      },
-      { type: 'spacer', length: 12 },
+      { type: 'spacer', length: 5 },
+      // 头部
       {
         type: "stack", direction: "row", alignItems: "center",
         children: [
-          { type: "stack", direction: "row", alignItems: "center", gap: 4, children: [
-              { type: "image", src: "sf-symbol:arrow.triangle.2.circlepath", width: 10, height: 10, color: trendColor },
-              { type: "text", text: updateTimeStr, font: { size: 10 }, textColor: trendColor }
-          ]},
+          { type: "image", src: "sf-symbol:fuelpump.fill", width: 16, height: 16, color: THEME.accent },
+          { type: 'spacer', length: 6 },
+          { type: "text", text: `${regionName || "成都"}油价`, font: { size: 15, weight: "heavy" }, textColor: THEME.text },
+          { type: "spacer" }, 
+          { type: "text", text: nextAdjust.countdown, font: { size: 11, weight: "bold", family: "Menlo" }, textColor: countdownColor }
+        ]
+      },
+      { type: 'spacer', length: 12 },
+      { type: 'stack', height: 0.5, backgroundColor: THEME.line }, // 分隔线
+      { type: 'spacer', length: 12 },
+
+      // 油价数值区块
+      {
+        type: "stack", direction: "row", gap: 8,
+        children: priceItems.map(row => ({
+          type: "stack", direction: "column", alignItems: "center", flex: 1, padding: [10, 0], backgroundColor: THEME.block, borderRadius: 10,
+          children: [
+            { type: "text", text: row.label, font: { size: 10, weight: "bold" }, textColor: row.color },
+            { type: 'spacer', length: 4 },
+            { type: "text", text: row.val?.toFixed(2) || "--", font: { size: 16, weight: "bold", family: "Menlo" }, textColor: THEME.text }
+          ]
+        }))
+      },
+
+      { type: 'spacer', length: 14 },
+      
+      // 底部信息
+      {
+        type: "stack", direction: "row", alignItems: "center",
+        children: [
+          { type: "image", src: "sf-symbol:clock", width: 10, height: 10, color: THEME.textSec },
+          { type: 'spacer', length: 4 },
+          { type: "text", text: updateTimeStr, font: { size: 10, family: "Menlo" }, textColor: THEME.textSec },
           { type: "spacer" },
-          { type: "stack", direction: "row", alignItems: "center", gap: 2, children: [
-              { type: "text", text: "本轮调价: ", font: { size: 10 }, textColor: trendColor },
-              { type: "text", text: trendInfo, font: { size: 10, weight: "bold" }, textColor: trendColor, lineLimit: 1, minScale: 0.8 }
-          ]}
+          { type: "text", text: trendInfo, font: { size: 10, weight: "bold" }, textColor: trendColor }
         ]
       },
       { type: 'spacer' }
