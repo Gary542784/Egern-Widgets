@@ -1,6 +1,6 @@
 /**
- * 📌 桌面小组件: ☁️ 搬瓦工 (BWH) 流量监控 (彻底修复 iOS 深浅自适应 纯色版)
- * ✨ 特色功能: 移除渐变背景，改用原生纯色，完美秒级跟随系统深浅模式切换
+ * 📌 桌面小组件: ☁️ 搬瓦工 (BWH) 流量监控 (真·系统自适应 秒切版)
+ * ✨ 特色功能: 完全移除 JS 静态判断，交由 iOS 底层引擎实现深浅模式的 0 延迟秒切
  * ⚠️ 使用说明: 运行前请务必填写下方 VEID 和 API Key
  * ==========================================
  */
@@ -10,22 +10,19 @@ export default async function (ctx) {
   const veid = "YOUR_VEID_HERE";
   const api_key = "YOUR_API_KEY_HERE";
 
-  // ✨ 环境探针：精准抓取 iOS 深浅模式
-  const isDark = ctx?.device?.colorScheme === 'dark';
+  // 🎨 iOS 原生动态颜色对象 (直接交给系统，实现秒切，绝不写死！)
+  const BG_MAIN    = { light: '#FFFFFF', dark: '#0D0D1A' }; // 浅色纯白，深色黑紫
+  const TEXT_MAIN  = { light: '#1C1C1E', dark: '#FFFFFF' }; // 浅色黑，深色白
+  const TEXT_SUB   = { light: '#8E8E93', dark: '#EBEBF5' }; // 副标题灰度
+  const BAR_BG     = { light: '#E5E5EA', dark: '#2C2C2E' }; // 进度条底槽颜色
 
-  // 🎨 iOS 深浅自适应原生颜色配置 (与全功能网络看板保持 100% 一致)
-  const BG_MAIN    = isDark ? '#0D0D1A' : '#FFFFFF'; // 深色黑紫，浅色纯白
-  const TEXT_MAIN  = isDark ? '#FFFFFF' : '#1C1C1E'; // 深色白，浅色黑
-  const TEXT_SUB   = isDark ? '#EBEBF5' : '#8E8E93'; // 副标题灰度
-  const BAR_BG     = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)'; // 进度条底槽颜色
-
-  const C_TITLE    = isDark ? '#FFD700' : '#FF9500'; // 标题：金/橙
-  const C_GREEN    = isDark ? '#32D74B' : '#34C759'; // 安全：亮绿/iOS绿
-  const C_YELLOW   = isDark ? '#FFD60A' : '#FFCC00'; // 警告：亮黄/iOS黄
-  const C_RED      = isDark ? '#FF3B30' : '#FF3B30'; // 危险：红
+  const C_TITLE    = { light: '#FF9500', dark: '#FFD700' }; // 标题：橙/金
+  const C_GREEN    = { light: '#34C759', dark: '#32D74B' }; // 安全：iOS绿/亮绿
+  const C_YELLOW   = { light: '#FFCC00', dark: '#FFD60A' }; // 警告：iOS黄/亮黄
+  const C_RED      = { light: '#FF3B30', dark: '#FF3B30' }; // 危险：红
   
-  const IC_BLUE    = isDark ? '#00AAE4' : '#007AFF'; // 节点图标：亮蓝/原生蓝
-  const IC_PURPLE  = isDark ? '#9945FF' : '#AF52DE'; // 流量图标：亮紫/原生紫
+  const IC_BLUE    = { light: '#007AFF', dark: '#00AAE4' }; // 节点图标：原生蓝/亮蓝
+  const IC_PURPLE  = { light: '#AF52DE', dark: '#9945FF' }; // 流量图标：原生紫/亮紫
 
   // 检查是否填写了 Key
   if (veid === "YOUR_VEID_HERE" || api_key === "YOUR_API_KEY_HERE") {
@@ -70,7 +67,7 @@ export default async function (ctx) {
   const location = data.node_location || '未知';
   const ip = (data.ip_addresses && data.ip_addresses[0]) ? data.ip_addresses[0] : 'N/A';
 
-  // 进度条颜色逻辑：>90% 变红，>70% 变橙(黄)，正常为绿
+  // 进度条颜色逻辑：>90% 变红，>70% 变黄，正常为绿
   const barColor = usedPercent >= 90 ? C_RED : usedPercent >= 70 ? C_YELLOW : C_GREEN;
   
   // 确保 Flex 值有效且至少为 1，防止布局塌陷
@@ -80,7 +77,7 @@ export default async function (ctx) {
   const realNow = new Date();
   const timeStr = `${String(realNow.getHours()).padStart(2, '0')}:${String(realNow.getMinutes()).padStart(2, '0')}:${String(realNow.getSeconds()).padStart(2, '0')}`;
 
-  // ✨ Row 样式：自适应系统文本色
+  // ✨ Row 样式：全部挂载动态颜色对象
   const Row = (ic, icCol, label, val, valCol, size = 11) => ({
     type: 'stack', direction: 'row', alignItems: 'center', gap: 6,
     children: [
@@ -94,8 +91,7 @@ export default async function (ctx) {
   return {
     type: 'widget', 
     padding: 14,
-    // ✨ 移除渐变，采用系统原生支持最完美的纯色背景
-    backgroundColor: BG_MAIN, 
+    backgroundColor: BG_MAIN, // 纯血统的原生动态背景
     refreshPolicy: { onNetworkChange: true, onEnter: true, timeout: 10 },
     children: [
       // 顶部标题栏
@@ -114,7 +110,7 @@ export default async function (ctx) {
           
           { type: 'spacer', length: 2 }, 
 
-          // 进度条 (动态适应深浅底槽颜色)
+          // 进度条
           { type: 'stack', direction: 'row', height: 4, borderRadius: 2, backgroundColor: BAR_BG, children: [
               { 
                 type: 'stack', 
@@ -134,7 +130,6 @@ export default async function (ctx) {
 
           { type: 'spacer', length: 2 }, 
 
-          // 下面这三行不传 size，默认使用 11 保持精致紧凑
           Row("chart.pie.fill", IC_PURPLE, "流量使用", `${toGB(used)} / ${toGB(total)}`, TEXT_MAIN),
           Row("arrow.triangle.2.circlepath", IC_PURPLE, "重置日期", resetStr, C_GREEN),
           Row("clock.fill", C_GREEN, "执行时间", timeStr, C_GREEN)
