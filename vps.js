@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * 📌 桌面小组件模板: ☁️ 搬瓦工 (BWH) 流量监控
- * ✨ 特色功能: 跟随系统深浅色自适应，进度条防塌陷，分级字号
+ * ✨ 特色功能: 极简纯黑白自适应，进度条防塌陷，分级字号
  * ⚠️ 使用说明: 运行前请务必填写下方 VEID 和 API Key
  * ==========================================
  */
@@ -10,20 +10,20 @@ export default async function (ctx) {
   const veid = "YOUR_VEID_HERE";
   const api_key = "YOUR_API_KEY_HERE";
 
-  // 🎨 Egern 自适应系统配色 (light 为日间模式, dark 为夜间模式)
+  // 🎨 彻底修复的纯黑/纯白自适应背景
   const BG_COLORS = [
-      { light: '#FFFFFF', dark: '#0D0D1A' }, // 渐变起点：日间纯白，夜间深色赛博
-      { light: '#F2F2F7', dark: '#2D1B69' }  // 渐变终点：日间浅灰，夜间赛博紫
+      { light: '#FFFFFF', dark: '#000000' }, // 渐变起点：日间纯白，夜间纯黑 (OLED 极致省电)
+      { light: '#FFFFFF', dark: '#000000' }  // 渐变终点：日间纯白，夜间纯黑
   ];
-  const C_TITLE = { light: '#000000', dark: '#FFD700' }; // 标题文字：日间黑，夜间金
+  const C_TITLE = { light: '#000000', dark: '#FFFFFF' }; // 标题文字：日间纯黑，夜间纯白
   const C_SUB = { light: '#8E8E93', dark: '#A2A2B5' };   // 副标题：日间系统灰，夜间冷灰
   const C_MAIN = { light: '#1C1C1E', dark: '#FFFFFF' };  // 主数值：日间深黑，夜间纯白
   const C_GREEN = { light: '#34C759', dark: '#32D74B' }; // 高亮绿
   const BAR_BG = { light: '#0000001A', dark: '#FFFFFF22'}; // 进度条底槽颜色
 
-  // 🎨 动态图标配色
-  const ICON_BLUE = { light: '#007AFF', dark: '#00AAE4' };
-  const ICON_PURPLE = { light: '#AF52DE', dark: '#9945FF' };
+  // 🎨 动态图标配色 (更换为更贴近原生 iOS 的夜间蓝紫)
+  const ICON_BLUE = { light: '#007AFF', dark: '#0A84FF' };
+  const ICON_PURPLE = { light: '#AF52DE', dark: '#BF5AF2' };
 
   // 检查是否填写了 Key
   if (veid === "YOUR_VEID_HERE" || api_key === "YOUR_API_KEY_HERE") {
