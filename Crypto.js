@@ -1,60 +1,72 @@
 /**
- * 🚀 Crypto Price Widget Pro
- * 风格：搬瓦工 (BWH) 极简风格
- * 特性：Coingecko API、双列排版、系统秒切深色模式、自动缓存
+ * 🚀 Crypto Price Widget (招商银行配色版)
+ * 适配：Egern / Widgy / Wstd
+ * 特色：招行色彩体系、等宽字体对齐、Binance 稳定数据源
  */
 
-// 配置要显示的币种 (对应 Coingecko ID)
-const COINS_CONFIG = [
-  { id: "bitcoin",      symbol: "BTC",  icon: "bitcoinsign.circle.fill",  color: "#F7931A" },
-  { id: "ethereum",     symbol: "ETH",  icon: "diamond.fill",             color: "#627EEA" },
-  { id: "solana",       symbol: "SOL",  icon: "sun.max.fill",             color: "#9945FF" },
-  { id: "binancecoin",  { symbol: "BNB",  icon: "hexagon.fill",             color: "#F3BA2F" },
-  { id: "ripple",       symbol: "XRP",  icon: "drop.fill",                color: "#23292F" },
-  { id: "dogecoin",     symbol: "DOGE", icon: "paws.fill",                color: "#C3A634" },
-  { id: "cardano",      symbol: "ADA",  icon: "circle.grid.cross.fill",   color: "#0033AD" },
-  { id: "avalanche-2",  symbol: "AVAX", icon: "triangle.fill",            color: "#E84142" }
-];
-
-const IDS = COINS_CONFIG.map(c => c.id).join(",");
-const API_URL = `https://api.coingecko.com/api/v3/simple/price?ids=${IDS}&vs_currencies=usd&include_24hr_change=true`;
-
 export default async function(ctx) {
-  // ===================== BWH 风格原生动态颜色 =====================
-  const BG_MAIN    = { light: '#FFFFFF', dark: '#0D0D1A' }; 
-  const TEXT_MAIN  = { light: '#1C1C1E', dark: '#FFFFFF' }; 
-  const TEXT_SUB   = { light: '#8E8E93', dark: '#A2A2B5' }; 
-  const LINE_COLOR = { light: '#E5E5EA', dark: '#2C2C2E' }; 
-  
-  const C_GOLD     = { light: '#FF9500', dark: '#FFD700' }; 
-  const C_GREEN    = { light: '#34C759', dark: '#32D74B' }; 
-  const C_RED      = { light: '#FF3B30', dark: '#FF453A' }; 
-
-  // ===================== 数据处理工具 =====================
-  const formatPrice = (p) => {
-    if (p >= 1000) return "$" + p.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    return p >= 1 ? "$" + p.toFixed(2) : "$" + p.toFixed(4);
+  // 🎨 颜色配置：完全引用你提供的招商银行主题
+  const theme = {
+    bg:    { light: "#FFFFFF", dark: "#1C1C1E" },
+    card:  { light: "#F5F5F7", dark: "#2C2C2E" },
+    title: { light: "#000000", dark: "#FFFFFF" },
+    label: { light: "#666666", dark: "#AAAAAA" },
+    price: { light: "#000000", dark: "#FFFFFF" },
+    up:    { light: "#00AA00", dark: "#30D158" },
+    down:  { light: "#FF0000", dark: "#FF453A" },
+    time:  { light: "#999999", dark: "#888888" }
   };
 
-  const formatChange = (c) => (c >= 0 ? "+" : "") + (c || 0).toFixed(1) + "%";
+  // 币种配置
+  const COIN_CONFIG = [
+    { id: 'BTCUSDT',  short: 'BTC',  icon: 'bitcoinsign.circle.fill', color: "#F7931A" },
+    { id: 'ETHUSDT',  short: 'ETH',  icon: 'diamond.fill',            color: "#627EEA" },
+    { id: 'SOLUSDT',  short: 'SOL',  icon: 'sun.max.fill',            color: "#9945FF" },
+    { id: 'BNBUSDT',  short: 'BNB',  icon: 'hexagon.fill',            color: "#F3BA2F" },
+    { id: 'XRPUSDT',  short: 'XRP',  icon: 'drop.fill',               color: "#23292F" },
+    { id: 'DOGEUSDT', short: 'DOGE', icon: 'paws.fill',               color: "#C3A634" },
+    { id: 'ADAUSDT',  short: 'ADA',  icon: 'circle.grid.cross.fill',  color: "#0033AD" },
+    { id: 'AVAXUSDT', short: 'AVAX', icon: 'triangle.fill',           color: "#E84142" }
+  ];
 
-  // ===================== 数据抓取逻辑 =====================
-  let prices = {};
-  try {
-    const resp = await ctx.http.get(API_URL, { timeout: 5000 });
-    const text = await resp.text();
-    prices = JSON.parse(text);
-    // 写入缓存以防下次断网
-    ctx.storage.setJSON("crypto_cache", { ts: Date.now(), data: prices });
-  } catch (e) {
-    const cached = ctx.storage.getJSON("crypto_cache");
-    prices = cached ? cached.data : {};
-  }
+  // --- 数据抓取 (改用 Binance，比 Coingecko 稳定 10 倍) ---
+  const fetchData = async () => {
+    try {
+      const resp = await ctx.http.get("https://api.binance.com/api/v3/ticker/24hr", {
+        headers: { "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)" },
+        timeout: 6000
+      });
+      const allData = JSON.parse(await resp.text());
+      // 过滤出我们需要的那几个币
+      const filtered = {};
+      allData.forEach(item => {
+        if (COIN_CONFIG.find(c => c.id === item.symbol)) {
+          filtered[item.symbol] = {
+            price: parseFloat(item.lastPrice),
+            change: parseFloat(item.priceChangePercent)
+          };
+        }
+      });
+      ctx.storage.setJSON("crypto_cache", filtered);
+      return filtered;
+    } catch (e) {
+      return ctx.storage.getJSON("crypto_cache") || {};
+    }
+  };
 
-  // ===================== 行组件渲染 =====================
+  const prices = await fetchData();
+
+  // --- 格式化工具 ---
+  const formatPrice = (p) => {
+    if (!p) return "---";
+    if (p >= 1000) return p.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return p >= 1 ? p.toFixed(2) : p.toFixed(4);
+  };
+
+  // --- 列表行渲染 ---
   const renderRow = (coin) => {
-    const data = prices[coin.id] || { usd: 0, usd_24h_change: 0 };
-    const change = data.usd_24h_change;
+    const data = prices[coin.id] || { price: 0, change: 0 };
+    const isUp = data.change >= 0;
 
     return {
       type: "stack",
@@ -65,52 +77,51 @@ export default async function(ctx) {
         {
           type: "stack",
           padding: 4,
-          backgroundColor: coin.color + "1A", // 10% 透明度背景
+          backgroundColor: coin.color + "1A", // 10% 透明度
           cornerRadius: 6,
           children: [{ type: "image", src: `sf-symbol:${coin.icon}`, width: 12, height: 12, color: coin.color }]
         },
-        { type: "text", text: coin.symbol, font: { size: 12, weight: "heavy", family: "Menlo" }, textColor: TEXT_MAIN },
+        { type: "text", text: coin.short, font: { size: 12, weight: "heavy", family: "Menlo" }, textColor: theme.title },
         { type: "spacer" },
         {
           type: "stack",
           direction: "column",
           alignItems: "trailing",
           children: [
-            { type: "text", text: formatPrice(data.usd), font: { size: 11, weight: "bold", family: "Menlo" }, textColor: TEXT_MAIN },
-            { type: "text", text: formatChange(change), font: { size: 9, weight: "heavy", family: "Menlo" }, textColor: change >= 0 ? C_GREEN : C_RED }
+            { type: "text", text: "$" + formatPrice(data.price), font: { size: 11, weight: "bold", family: "Menlo" }, textColor: theme.price },
+            { type: "text", text: (isUp ? "+" : "") + data.change.toFixed(1) + "%", font: { size: 9, weight: "heavy", family: "Menlo" }, textColor: isUp ? theme.up : theme.down }
           ]
         }
       ]
     };
   };
 
-  // ===================== 布局判定 =====================
   const isMedium = ctx.widgetFamily === "systemMedium" || !ctx.widgetFamily;
-  const leftSide = COINS_CONFIG.slice(0, 4).map(c => renderRow(c));
-  const rightSide = COINS_CONFIG.slice(4, 8).map(c => renderRow(c));
+  const leftSide = COIN_CONFIG.slice(0, 4).map(c => renderRow(c));
+  const rightSide = COIN_CONFIG.slice(4, 8).map(c => renderRow(c));
 
   return {
     type: "widget",
     padding: 14,
-    backgroundColor: BG_MAIN,
-    refreshPolicy: { onEnter: true, onNetworkChange: true, timeout: 60 },
+    backgroundColor: theme.bg,
+    refreshPolicy: { onEnter: true, timeout: 60 },
     children: [
-      // 头部 (BWH 经典样式)
+      // 头部 (仿照招行/BWH 简洁头部)
       {
         type: "stack",
         direction: "row",
         alignItems: "center",
         children: [
-          { type: "image", src: "sf-symbol:chart.line.uptrend.xyaxis.circle.fill", width: 15, height: 15, color: C_GOLD },
+          { type: "image", src: "sf-symbol:chart.bar.fill", width: 14, height: 14, color: theme.label },
           { type: "spacer", length: 6 },
-          { type: "text", text: "MARKET WATCH", font: { size: 13, weight: "heavy" }, textColor: TEXT_MAIN },
+          { type: "text", text: "MARKET CENTER", font: { size: 13, weight: "heavy" }, textColor: theme.title },
           { type: "spacer" },
-          { type: "text", text: "LIVE", font: { size: 9, weight: "bold" }, textColor: C_GREEN }
+          { type: "text", text: "Binance Feed", font: { size: 9, weight: "bold" }, textColor: theme.time }
         ]
       },
       { type: "spacer", length: 10 },
-      // 像素级分割线
-      { type: "stack", height: 0.5, backgroundColor: LINE_COLOR },
+      // 招行分割线颜色
+      { type: "stack", height: 0.5, backgroundColor: theme.card },
       { type: "spacer", length: 12 },
       
       // 主体内容
@@ -120,7 +131,7 @@ export default async function(ctx) {
         gap: 20,
         children: [
           { type: "stack", direction: "column", gap: 10, flex: 1, children: leftSide },
-          { type: "stack", width: 0.5, backgroundColor: LINE_COLOR, marginTop: 4, marginBottom: 4 }, // 中间竖线
+          { type: "stack", width: 0.5, backgroundColor: theme.card, marginTop: 4, marginBottom: 4 },
           { type: "stack", direction: "column", gap: 10, flex: 1, children: rightSide }
         ]
       } : { 
@@ -129,7 +140,7 @@ export default async function(ctx) {
       
       { type: "spacer" },
       
-      // 底部对齐时间
+      // 底部时间
       {
         type: "stack",
         direction: "row",
@@ -137,9 +148,9 @@ export default async function(ctx) {
         children: [
           { 
             type: "text", 
-            text: `Data: Coingecko • Update: ${new Date().toLocaleTimeString('zh-CN', {hour12:false})}`, 
+            text: `更新时间: ${new Date().toLocaleTimeString('zh-CN', {hour12:false})}`, 
             font: { size: 8 }, 
-            textColor: TEXT_SUB 
+            textColor: theme.time 
           }
         ]
       }
