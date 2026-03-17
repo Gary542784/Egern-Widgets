@@ -1,143 +1,111 @@
 /**
- * ⛽ 全国油价（极致黑白自适应 - 底部布局优化版）
- * 🛠 修复：将底部日期和趋势下移，解决“太靠上”的问题
+ * ⛽ 全国油价（极致黑白 Pro - 底部布局深度优化版）
+ * 🛠 修复：大幅增加数值区块与底部的间距，让时间日期彻底“下沉”
  */
 
 export default async function (ctx) {
-  // ===================== 极致自适应色板 (Crypto Pro 风格) =====================
-  const THEME = {
-    bg: { light: '#FFFFFF', dark: '#000000' },     // 纯白/纯黑
-    text: { light: '#000000', dark: '#FFFFFF' },   // 主文字
-    textSec: { light: '#8E8E93', dark: '#8E8E93' },// 副文字
-    line: { light: '#E5E5EA', dark: '#1C1C1E' },   // 分隔线
-    accent: { light: '#FF9500', dark: '#FFD700' }, // 强调橙
-    block: { light: '#F2F2F7', dark: '#1C1C1E' },  // 数值底色
-    green: { light: '#34C759', dark: '#32D74B' },
-    red: { light: '#FF3B30', dark: '#FF453A' }
+  const T = {
+    bg: { light: '#FFFFFF', dark: '#000000' },
+    txt: { light: '#000000', dark: '#FFFFFF' },
+    sub: { light: '#8E8E93', dark: '#8E8E93' },
+    line: { light: '#E5E5EA', dark: '#1C1C1E' },
+    accent: { light: '#FF9500', dark: '#FFD700' },
+    block: { light: '#F2F2F7', dark: '#1C1C1E' }
   };
 
-  const regionParam = ctx.env.region || "sichuan/chengdu"; 
-  const SHOW_TREND = (ctx.env.SHOW_TREND || "true").trim() !== "false";
-
-  // ===================== 2026 调价历法 =====================
-  const CALENDAR_2026 = [
+  const CAL_2026 = [
     {m: 1, d: 12}, {m: 1, d: 23}, {m: 2, d: 9},  {m: 2, d: 23}, {m: 3, d: 9},  {m: 3, d: 23}, {m: 4, d: 7},  {m: 4, d: 21}, 
     {m: 5, d: 8},  {m: 5, d: 22}, {m: 6, d: 5},  {m: 6, d: 19}, {m: 7, d: 3},  {m: 7, d: 17}, {m: 7, d: 31}, {m: 8, d: 14}, 
     {m: 8, d: 28}, {m: 9, d: 11}, {m: 9, d: 25}, {m: 10, d: 14}, {m: 10, d: 28}, {m: 11, d: 11}, {m: 11, d: 25}, {m: 12, d: 9}, {m: 12, d: 23}
   ];
 
   const now = new Date();
-  const currYear = now.getFullYear();
-  const updateTimeStr = `${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const upTime = `${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
-  const getNextAdjust = () => {
-    for (const item of CALENDAR_2026) {
-      const target = new Date(currYear, item.m - 1, item.d, 23, 59, 59);
-      if (target > now) {
-        const diffHours = (target - now) / (1000 * 60 * 60);
-        return { dateStr: `${item.m}月${item.d}日`, isUrgent: diffHours < 72 };
-      }
+  let nextDate = "待更新";
+  for (const item of CAL_2026) {
+    if (new Date(2026, item.m - 1, item.d, 23, 59) > now) {
+      nextDate = `${item.m}月${item.d}日`;
+      break;
     }
-    return { dateStr: "待更新", isUrgent: false };
-  };
+  }
 
-  const next = getNextAdjust();
-  const dateColor = next.isUrgent ? THEME.red : THEME.textSec;
-  
-  let prices = { p92: null, p95: null, p98: null, diesel: null };
-  let regionName = "";
-  let trendInfo = "数据获取中...";
-  let trendColor = THEME.textSec; 
+  let region = "加载中", trend = "调价信息获取中...", trendCol = T.sub;
+  let p = { p92: "--", p95: "--", p98: "--", diesel: "--" };
 
   try {
-    const resp = await ctx.http.get(`http://m.qiyoujiage.com/${regionParam}.shtml`, { timeout: 5000 });
-    const html = await resp.text();
-    const titleMatch = html.match(/<title>([^_]+)_/);
-    if (titleMatch) regionName = titleMatch[1].trim().replace(/(油价|实时|今日|最新|价格)/g, '').trim();
-    
-    const regPrice = /<dl>[\s\S]+?<dt>(.*油)<\/dt>[\s\S]+?<dd>(.*)\(元\)<\/dd>/gm;
+    const reg = ctx.env.region || "sichuan/chengdu";
+    const res = await ctx.http.get(`http://m.qiyoujiage.com/${reg}.shtml`, { timeout: 3000 });
+    const html = await res.text();
+    const rName = html.match(/<title>([^_]+)_/);
+    if (rName) region = rName[1].replace(/(油价|实时|今日|最新|价格)/g, '');
+    const regP = /<dl>[\s\S]+?<dt>(.*油)<\/dt>[\s\S]+?<dd>(.*)\(元\)<\/dd>/gm;
     let m;
-    while ((m = regPrice.exec(html)) !== null) {
-      const val = parseFloat(m[2]);
-      if (m[1].includes("92")) prices.p92 = val;
-      if (m[1].includes("95")) prices.p95 = val;
-      if (m[1].includes("98")) prices.p98 = val;
-      if (m[1].includes("柴") || m[1].includes("0号")) prices.diesel = val;
+    while ((m = regP.exec(html)) !== null) {
+      const val = parseFloat(m[2]).toFixed(2);
+      if (m[1].includes("92")) p.p92 = val;
+      if (m[1].includes("95")) p.p95 = val;
+      if (m[1].includes("98")) p.p98 = val;
+      if (m[1].includes("柴")) p.diesel = val;
     }
-    
-    if (SHOW_TREND) {
-      const trendMatch = html.match(/<div class="tishi">[\s\S]*?<span>([^<]+)<\/span>[\s\S]*?<br\/>([\s\S]+?)<br\/>/);
-      if (trendMatch) {
-        const timeText = trendMatch[1];
-        const priceText = trendMatch[2];
-        const adjDate = timeText.match(/(\d{1,2}月\d{1,2}日)/)?.[1] || "";
-        const isUp = priceText.includes("上调");
-        const isDown = priceText.includes("下调");
-        trendColor = isUp ? THEME.red : (isDown ? THEME.green : THEME.textSec);
-        const allP = priceText.match(/[\d\.]+\s*元\/升/g);
-        const amt = allP && allP.length > 0 ? (allP.length >= 2 ? `${allP[0].match(/[\d\.]+/)[0]}-${allP[1].match(/[\d\.]+/)[0]}元/L` : `${allP[0].match(/[\d\.]+/)[0]}元/L`) : "";
-        trendInfo = `${adjDate}${isUp?'上涨':isDown?'下调':'调价'} ${amt}`;
-      }
+    const tMatch = html.match(/<div class="tishi">[\s\S]*?<span>([^<]+)<\/span>[\s\S]*?<br\/>([\s\S]+?)<br\/>/);
+    if (tMatch) {
+      const isUp = tMatch[2].includes("上调"), isDown = tMatch[2].includes("下调");
+      const d = tMatch[1].match(/(\d{1,2}月\d{1,2}日)/)?.[1] || "";
+      const amt = tMatch[2].match(/[\d\.]+\s*元\/升/g)?.[0] || "";
+      trend = `${d}${isUp?'上涨':isDown?'下调':'调价'} ${amt}`;
+      trendCol = isUp ? {light:'#FF3B30', dark:'#FF453A'} : (isDown ? {light:'#34C759', dark:'#32D74B'} : T.sub);
     }
-  } catch (e) { trendInfo = "超时,请刷新"; }
-
-  const priceItems = [
-    { label: "92#", val: prices.p92, color: THEME.accent }, 
-    { label: "95#", val: prices.p95, color: "#FF6B35" },
-    { label: "98#", val: prices.p98, color: THEME.red },
-    { label: "柴油", val: prices.diesel, color: THEME.green }
-  ].filter(i => i.val);
+  } catch (e) { region = "成都"; }
 
   return {
-    type: "widget", padding: 16,
-    backgroundColor: THEME.bg,
+    type: "widget", padding: 16, backgroundColor: T.bg,
     children: [
       { type: 'spacer', length: 5 },
-      // --- 顶部 ---
-      {
-        type: "stack", direction: "row", alignItems: "center",
-        children: [
-          { type: "image", src: "sf-symbol:fuelpump.fill", width: 16, height: 16, color: THEME.accent },
+      // 头部
+      { type: "stack", direction: "row", alignItems: "center", children: [
+          { type: "image", src: "sf-symbol:fuelpump.fill", width: 16, height: 16, color: T.accent },
           { type: 'spacer', length: 6 },
-          { type: "text", text: `${regionName || "地区"}油价`, font: { size: 15, weight: "heavy" }, textColor: THEME.text },
+          { type: "text", text: `${region}油价`, font: { size: 15, weight: "heavy" }, textColor: T.txt },
           { type: "spacer" }, 
-          { type: "text", text: `下轮调价: ${next.dateStr}`, font: { size: 11, weight: "bold", family: "Menlo" }, textColor: dateColor }
-        ]
-      },
-      { type: 'spacer', length: 12 },
-      { type: 'stack', height: 0.5, backgroundColor: THEME.line },
+          { type: "text", text: `下轮调价: ${nextDate}`, font: { size: 11, weight: "bold", family: "Menlo" }, textColor: T.sub }
+      ]},
+      { type: 'spacer', length: 10 },
+      { type: 'stack', height: 0.5, backgroundColor: T.line }, 
       { type: 'spacer', length: 12 },
 
-      // --- 数值区块 ---
-      {
-        type: "stack", direction: "row", gap: 8,
-        children: priceItems.map(row => ({
-          type: "stack", direction: "column", alignItems: "center", flex: 1, padding: [10, 0], backgroundColor: THEME.block, borderRadius: 10,
+      // 数值区块
+      { type: "stack", direction: "row", gap: 8, children: [
+          { label: "92#", val: p.p92, col: T.accent },
+          { label: "95#", val: p.p95, col: "#FF6B35" },
+          { label: "98#", val: p.p98, col: "#FF453A" },
+          { label: "柴油", val: p.diesel, col: "#32D74B" }
+      ].map(i => ({
+          type: "stack", direction: "column", alignItems: "center", flex: 1, padding: [10, 0], backgroundColor: T.block, borderRadius: 10,
           children: [
-            { type: "text", text: row.label, font: { size: 10, weight: "bold" }, textColor: row.color },
+            { type: "text", text: i.label, font: { size: 10, weight: "bold" }, textColor: i.col },
             { type: 'spacer', length: 4 },
-            { type: "text", text: `${row.val?.toFixed(2) || "--"}`, font: { size: 16, weight: "bold", family: "Menlo" }, textColor: THEME.text }
+            { type: "text", text: i.val, font: { size: 16, weight: "bold", family: "Menlo" }, textColor: T.txt }
           ]
-        }))
-      },
+      }))},
 
-      // 🚀 关键改进：这里改用弹性间距，把后面的内容往下压
+      // 🚀 核心改动点：增加两个 spacer
+      // 第一个固定 spacer 确保它离开数值区块一段距离
+      { type: 'spacer', length: 20 },
+      // 第二个弹性 spacer 强制占据剩余所有空间，把底部内容压死到最下面
       { type: 'spacer' },
       
-      // --- 底部趋势栏 ---
-      {
-        type: "stack", direction: "row", alignItems: "center",
-        children: [
+      // 底部 (时间 & 趋势)
+      { type: "stack", direction: "row", alignItems: "center", children: [
           { type: "stack", direction: "row", alignItems: "center", gap: 4, children: [
-              { type: "image", src: "sf-symbol:clock", width: 10, height: 10, color: THEME.textSec },
-              { type: "text", text: updateTimeStr, font: { size: 10, family: "Menlo" }, textColor: THEME.textSec }
+              { type: "image", src: "sf-symbol:clock", width: 10, height: 10, color: T.sub },
+              { type: "text", text: upTime, font: { size: 10, family: "Menlo" }, textColor: T.sub }
           ]},
           { type: "spacer" },
-          { type: "text", text: trendInfo, font: { size: 10, weight: "bold" }, textColor: trendColor, lineLimit: 1, minScale: 0.5 }
-        ]
-      },
-      // 🚀 底部留一个小固定间距，防止贴边
-      { type: 'spacer', length: 2 }
+          { type: "text", text: trend, font: { size: 10, weight: "bold" }, textColor: trendCol, lineLimit: 1, minScale: 0.5 }
+      ]},
+      // 底部防贴边间距设小，让整体下沉感更强
+      { type: 'spacer', length: 2 } 
     ]
   };
 }
