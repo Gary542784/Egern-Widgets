@@ -1,6 +1,6 @@
 /**
- * ⛽ 全国油价（极致黑白自适应 - 调价日期修复版）
- * 🛠 修复：确保右上角只显示日期（如 3月23日），修复显示失效问题
+ * ⛽ 全国油价（极致黑白自适应 - 底部布局优化版）
+ * 🛠 修复：将底部日期和趋势下移，解决“太靠上”的问题
  */
 
 export default async function (ctx) {
@@ -30,16 +30,12 @@ export default async function (ctx) {
   const currYear = now.getFullYear();
   const updateTimeStr = `${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
-  // 计算下轮日期逻辑
   const getNextAdjust = () => {
     for (const item of CALENDAR_2026) {
       const target = new Date(currYear, item.m - 1, item.d, 23, 59, 59);
       if (target > now) {
         const diffHours = (target - now) / (1000 * 60 * 60);
-        return { 
-          dateStr: `${item.m}月${item.d}日`, 
-          isUrgent: diffHours < 72 // 不足3天变红
-        };
+        return { dateStr: `${item.m}月${item.d}日`, isUrgent: diffHours < 72 };
       }
     }
     return { dateStr: "待更新", isUrgent: false };
@@ -56,12 +52,9 @@ export default async function (ctx) {
   try {
     const resp = await ctx.http.get(`http://m.qiyoujiage.com/${regionParam}.shtml`, { timeout: 5000 });
     const html = await resp.text();
-    
-    // 地区解析
     const titleMatch = html.match(/<title>([^_]+)_/);
     if (titleMatch) regionName = titleMatch[1].trim().replace(/(油价|实时|今日|最新|价格)/g, '').trim();
     
-    // 油价解析
     const regPrice = /<dl>[\s\S]+?<dt>(.*油)<\/dt>[\s\S]+?<dd>(.*)\(元\)<\/dd>/gm;
     let m;
     while ((m = regPrice.exec(html)) !== null) {
@@ -72,23 +65,21 @@ export default async function (ctx) {
       if (m[1].includes("柴") || m[1].includes("0号")) prices.diesel = val;
     }
     
-    // 调价趋势解析
     if (SHOW_TREND) {
       const trendMatch = html.match(/<div class="tishi">[\s\S]*?<span>([^<]+)<\/span>[\s\S]*?<br\/>([\s\S]+?)<br\/>/);
       if (trendMatch) {
         const timeText = trendMatch[1];
         const priceText = trendMatch[2];
-        const adjustDate = timeText.match(/(\d{1,2}月\d{1,2}日)/)?.[1] || "";
+        const adjDate = timeText.match(/(\d{1,2}月\d{1,2}日)/)?.[1] || "";
         const isUp = priceText.includes("上调");
         const isDown = priceText.includes("下调");
         trendColor = isUp ? THEME.red : (isDown ? THEME.green : THEME.textSec);
-        
-        const allPrices = priceText.match(/[\d\.]+\s*元\/升/g);
-        const amount = allPrices && allPrices.length > 0 ? (allPrices.length >= 2 ? `${allPrices[0].match(/[\d\.]+/)[0]}-${allPrices[1].match(/[\d\.]+/)[0]}元/L` : `${allPrices[0].match(/[\d\.]+/)[0]}元/L`) : "";
-        trendInfo = `${adjustDate}${isUp?'上涨':isDown?'下调':'调价'} ${amount}`;
+        const allP = priceText.match(/[\d\.]+\s*元\/升/g);
+        const amt = allP && allP.length > 0 ? (allP.length >= 2 ? `${allP[0].match(/[\d\.]+/)[0]}-${allP[1].match(/[\d\.]+/)[0]}元/L` : `${allP[0].match(/[\d\.]+/)[0]}元/L`) : "";
+        trendInfo = `${adjDate}${isUp?'上涨':isDown?'下调':'调价'} ${amt}`;
       }
     }
-  } catch (e) { trendInfo = "网络请求超时"; }
+  } catch (e) { trendInfo = "超时,请刷新"; }
 
   const priceItems = [
     { label: "92#", val: prices.p92, color: THEME.accent }, 
@@ -102,7 +93,7 @@ export default async function (ctx) {
     backgroundColor: THEME.bg,
     children: [
       { type: 'spacer', length: 5 },
-      // --- 顶部标题栏 ---
+      // --- 顶部 ---
       {
         type: "stack", direction: "row", alignItems: "center",
         children: [
@@ -110,7 +101,6 @@ export default async function (ctx) {
           { type: 'spacer', length: 6 },
           { type: "text", text: `${regionName || "地区"}油价`, font: { size: 15, weight: "heavy" }, textColor: THEME.text },
           { type: "spacer" }, 
-          // 🚀 确保这里只显示日期
           { type: "text", text: `下轮调价: ${next.dateStr}`, font: { size: 11, weight: "bold", family: "Menlo" }, textColor: dateColor }
         ]
       },
@@ -131,7 +121,8 @@ export default async function (ctx) {
         }))
       },
 
-      { type: 'spacer', length: 14 },
+      // 🚀 关键改进：这里改用弹性间距，把后面的内容往下压
+      { type: 'spacer' },
       
       // --- 底部趋势栏 ---
       {
@@ -142,11 +133,11 @@ export default async function (ctx) {
               { type: "text", text: updateTimeStr, font: { size: 10, family: "Menlo" }, textColor: THEME.textSec }
           ]},
           { type: "spacer" },
-          // 底部日期趋势显示
-          { type: "text", text: `${trendInfo}`, font: { size: 10, weight: "bold" }, textColor: trendColor, lineLimit: 1, minScale: 0.5 }
+          { type: "text", text: trendInfo, font: { size: 10, weight: "bold" }, textColor: trendColor, lineLimit: 1, minScale: 0.5 }
         ]
       },
-      { type: 'spacer' }
+      // 🚀 底部留一个小固定间距，防止贴边
+      { type: 'spacer', length: 2 }
     ]
   };
 }
