@@ -1,243 +1,109 @@
 /**
- * Crypto Price Widget - Egern Adaptive Version
- * 适配 Egern 系统配色：支持深浅色模式自动切换
+ * 🚀 加密货币看板 Pro (自适应纯色版)
+ * 集成：主流币种实时价、24h 涨跌、交易所延迟、系统深浅色适配
  */
-
-var COINS = "bitcoin,ethereum,solana,binancecoin,ripple,dogecoin,cardano,avalanche-2";
-var API_URL = "https://api.coingecko.com/api/v3/simple/price?ids=" + COINS + "&vs_currencies=usd&include_24hr_change=true";
-
-// --- 系统自适应配色定义 ---
-var THEME = {
-  bg: "systemBackground",               // 系统背景
-  secondaryBg: "secondarySystemBackground", // 次级背景（卡片感）
-  label: "label",                       // 一级文字
-  secondaryLabel: "secondaryLabel",     // 二级文字
-  tertiaryLabel: "tertiaryLabel",       // 三级文字
-  separator: "separator",               // 分隔线
-  accent: "systemOrange",               // 强调色 (原金黄色改为系统橙，更适配)
-  up: "#34C759",                        // 上涨 (iOS Green)
-  down: "#FF3B30",                      // 下跌 (iOS Red)
-};
-
-var COIN_MAP = {
-  bitcoin:      { symbol: "BTC",  name: "Bitcoin",   icon: "bitcoinsign.circle.fill",  color: "#F7931A" },
-  ethereum:     { symbol: "ETH",  name: "Ethereum",  icon: "diamond.fill",             color: "#627EEA" },
-  solana:       { symbol: "SOL",  name: "Solana",    icon: "sun.max.fill",             color: "#9945FF" },
-  binancecoin:  { symbol: "BNB",  name: "BNB Chain", icon: "hexagon.fill",             color: "#F3BA2F" },
-  ripple:       { symbol: "XRP",  name: "Ripple",    icon: "drop.fill",                color: "#00AAE4" },
-  dogecoin:     { symbol: "DOGE", name: "Dogecoin",  icon: "hare.fill",                color: "#C3A634" },
-  cardano:      { symbol: "ADA",  name: "Cardano",   icon: "circle.grid.cross.fill",   color: "#0033AD" },
-  "avalanche-2":{ symbol: "AVAX", name: "Avalanche", icon: "triangle.fill",            color: "#E84142" },
-};
-
-var ALL_IDS = Object.keys(COIN_MAP);
-
-// --- 格式化函数 ---
-function formatPrice(price) {
-  if (price >= 1000) return "$" + price.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  if (price >= 1) return "$" + price.toFixed(2);
-  return "$" + price.toFixed(4);
-}
-
-function formatChange(change) {
-  if (change == null) return "+0.0%";
-  var sign = change >= 0 ? "+" : "";
-  return sign + change.toFixed(1) + "%";
-}
-
-// --- DSL Builders (已适配 THEME) ---
-
-function txt(text, fontSize, weight, color, opts) {
-  var el = {
-    type: "text",
-    text: text,
-    font: { weight: weight || "regular", size: fontSize },
-    textColor: color || THEME.label,
-  };
-  if (opts) { for (var k in opts) el[k] = opts[k]; }
-  return el;
-}
-
-function icon(systemName, size, tintColor, opts) {
-  var el = {
-    type: "image",
-    src: "sf-symbol:" + systemName,
-    width: size,
-    height: size,
-    color: tintColor || THEME.label,
-  };
-  if (opts) { for (var k in opts) el[k] = opts[k]; }
-  return el;
-}
-
-function hstack(children, opts) {
-  var el = { type: "stack", direction: "row", alignItems: "center", children: children };
-  if (opts) { for (var k in opts) el[k] = opts[k]; }
-  return el;
-}
-
-function vstack(children, opts) {
-  var el = { type: "stack", direction: "column", alignItems: "start", children: children };
-  if (opts) { for (var k in opts) el[k] = opts[k]; }
-  return el;
-}
-
-function spacer(length) {
-  var el = { type: "spacer" };
-  if (length != null) el.length = length;
-  return el;
-}
-
-function dateTxt(dateStr, style, fontSize, weight, color) {
-  return {
-    type: "date",
-    date: dateStr,
-    format: style,
-    font: { size: fontSize, weight: weight || "medium" },
-    textColor: color || THEME.secondaryLabel,
-  };
-}
-
-function separator() {
-  return hstack([spacer()], { height: 0.5, backgroundColor: THEME.separator });
-}
-
-// --- UI Components ---
-
-function headerBar(title, titleSize, iconSize, showTime) {
-  var children = [
-    icon("chart.line.uptrend.xyaxis.circle.fill", iconSize, THEME.accent),
-    txt(title, titleSize, "heavy", THEME.accent),
-    spacer(),
-  ];
-  if (showTime) {
-    children.push(dateTxt(new Date().toISOString(), "time", Math.max(9, titleSize - 4), "medium", THEME.tertiaryLabel));
-  }
-  return hstack(children, { gap: 4 });
-}
-
-function footerBar() {
-  return hstack([
-    icon("clock.arrow.circlepath", 8, THEME.tertiaryLabel),
-    dateTxt(new Date().toISOString(), "relative", 9, "medium", THEME.tertiaryLabel),
-    spacer(),
-    txt("CoinGecko", 8, "medium", THEME.tertiaryLabel),
-  ], { gap: 3 });
-}
-
-// --- Row & Card Builders ---
-
-function coinCard(id, data, variant) {
-  var info = COIN_MAP[id];
-  var change = data.usd_24h_change;
-  var color = change >= 0 ? THEME.up : THEME.down;
-  
-  // 使用 secondarySystemBackground 作为卡片底色，确保在深浅模式下都有浮起感
-  return vstack([
-    hstack([
-      icon(info.icon, 14, info.color),
-      txt(info.symbol, 12, "bold", THEME.label)
-    ], { gap: 4 }),
-    spacer(4),
-    txt(formatPrice(data.usd), 15, "semibold", THEME.label, { maxLines: 1 }),
-    hstack([
-      icon(change >= 0 ? "arrow.up.right" : "arrow.down.right", 8, color),
-      txt(formatChange(change), 10, "bold", color),
-    ], { gap: 2 })
-  ], {
-    padding: [10, 10, 10, 10],
-    backgroundColor: THEME.secondaryBg,
-    borderRadius: 12,
-    borderWidth: 0.5,
-    borderColor: THEME.separator
-  });
-}
-
-function coinRow(id, data, compact) {
-  var info = COIN_MAP[id];
-  var change = data.usd_24h_change;
-  var color = change >= 0 ? THEME.up : THEME.down;
-  var sz = compact ? 12 : 14;
-
-  return hstack([
-    icon(info.icon, sz, info.color),
-    spacer(6),
-    txt(info.symbol, sz, "medium", THEME.label),
-    spacer(),
-    txt(formatPrice(data.usd), sz, "semibold", THEME.label),
-    spacer(8),
-    txt(formatChange(change), sz, "bold", color),
-  ], { height: compact ? 22 : 28 });
-}
-
-// --- Layouts ---
-
-function buildSystemSmall(prices) {
-  var rows = ALL_IDS.slice(0, 4)
-    .filter(id => prices[id])
-    .map(id => coinRow(id, prices[id], true));
-
-  return {
-    type: "widget",
-    backgroundColor: THEME.bg,
-    padding: 12,
-    children: [
-      headerBar("Crypto", 14, 16, false),
-      spacer(8),
-      separator(),
-      spacer(8),
-      ...rows,
-      spacer(),
-      footerBar()
-    ]
-  };
-}
-
-function buildSystemMedium(prices) {
-  var ids = ALL_IDS.filter(id => prices[id]);
-  var left = ids.slice(0, 4).map(id => coinRow(id, prices[id], true));
-  var right = ids.slice(4, 8).map(id => coinRow(id, prices[id], true));
-
-  return {
-    type: "widget",
-    backgroundColor: THEME.bg,
-    padding: 12,
-    children: [
-      headerBar("Market Overview", 15, 18, true),
-      spacer(10),
-      hstack([
-        vstack(left, { flex: 1 }),
-        spacer(12),
-        vstack([], { width: 0.5, height: 100, backgroundColor: THEME.separator }),
-        spacer(12),
-        vstack(right, { flex: 1 }),
-      ], { alignItems: "start" }),
-      spacer(),
-      footerBar()
-    ]
-  };
-}
-
-// --- Main Render ---
-
 export default async function(ctx) {
-  const family = ctx.widgetFamily || "systemMedium";
-  
-  try {
-    const resp = await ctx.http.get(API_URL);
-    const prices = await resp.json();
+  // ===================== iOS 深浅自适应原生颜色 (同步看板 Pro 风格) =====================
+  const BG_MAIN   = { light: '#FFFFFF', dark: '#0D0D1A' }; 
+  const C_MAIN    = { light: '#1C1C1E', dark: '#FFFFFF' }; 
+  const C_SUB     = { light: '#8E8E93', dark: '#A2A2B5' }; 
+  const C_TITLE   = { light: '#1C1C1E', dark: '#FFFFFF' }; 
+  const C_GREEN   = { light: '#34C759', dark: '#32D74B' }; 
+  const C_RED     = { light: '#FF3B30', dark: '#FF3B30' }; 
+  const C_YELLOW  = { light: '#FF9500', dark: '#FFD700' }; 
+  const IC_GOLD   = { light: '#FF9500', dark: '#FFD700' };
 
-    if (family === "systemSmall") return buildSystemSmall(prices);
-    return buildSystemMedium(prices); // 默认返回 Medium 布局
+  // ===================== 配置与配置映射 =====================
+  const COINS = "bitcoin,ethereum,solana,binancecoin,ripple,dogecoin";
+  const API_URL = `https://api.coingecko.com/api/v3/simple/price?ids=${COINS}&vs_currencies=usd&include_24hr_change=true`;
 
-  } catch (e) {
+  const COIN_MAP = {
+    bitcoin:      { symbol: "BTC",  icon: "bitcoinsign.circle.fill",  color: "#F7931A" },
+    ethereum:     { symbol: "ETH",  icon: "diamond.fill",             color: "#627EEA" },
+    solana:       { symbol: "SOL",  icon: "sun.max.fill",             color: "#9945FF" },
+    binancecoin:  { symbol: "BNB",  icon: "hexagon.fill",             color: "#F3BA2F" },
+    ripple:       { symbol: "XRP",  icon: "drop.fill",                color: "#00AAE4" },
+    dogecoin:     { symbol: "DOGE", icon: "hare.fill",                color: "#C3A634" }
+  };
+
+  // ===================== 辅助函数 =====================
+  const formatPrice = (p) => {
+    if (p >= 1000) return "$" + p.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return "$" + (p >= 1 ? p.toFixed(2) : p.toFixed(4));
+  };
+
+  const formatChange = (c) => (c >= 0 ? "+" : "") + c.toFixed(1) + "%";
+
+  // ===================== Wstd 100% 统一 Row 组件 =====================
+  const CoinRow = (id, data) => {
+    const info = COIN_MAP[id];
+    const change = data.usd_24h_change || 0;
+    const changeCol = change >= 0 ? C_GREEN : C_RED;
+    const changeIcon = change >= 0 ? "arrow.up.right" : "arrow.down.right";
+
     return {
-      type: "widget",
-      backgroundColor: THEME.bg,
+      type: 'stack', direction: 'row', alignItems: 'center', gap: 6,
       children: [
-        icon("exclamationmark.triangle.fill", 24, THEME.down),
-        txt("Network Error", 14, "medium", THEME.label)
+        { type: 'image', src: `sf-symbol:${info.icon}`, color: info.color, width: 13, height: 13 },
+        { type: 'text', text: info.symbol, font: { size: 11, weight: 'bold' }, textColor: C_MAIN },
+        { type: 'spacer' },
+        { type: 'text', text: formatPrice(data.usd), font: { size: 11, weight: 'bold', family: 'Menlo' }, textColor: C_MAIN },
+        { type: 'stack', direction: 'row', alignItems: 'center', gap: 2, children: [
+            { type: 'image', src: `sf-symbol:${changeIcon}`, color: changeCol, width: 8, height: 8 },
+            { type: 'text', text: formatChange(change), font: { size: 10, weight: 'bold', family: 'Menlo' }, textColor: changeCol }
+        ], width: 45, justifyContent: 'end' }
       ]
     };
+  };
+
+  // ===================== 数据获取 =====================
+  let prices = {}, delay = 0, statusTxt = "Normal";
+  const start = Date.now();
+
+  try {
+    const res = await ctx.http.get(API_URL, { timeout: 4000 });
+    prices = await res.json();
+    delay = Date.now() - start;
+  } catch (e) {
+    statusTxt = "Timeout";
   }
+
+  const delayColor = delay > 0 && delay < 500 ? C_GREEN : (delay >= 500 ? C_YELLOW : C_RED);
+  const coinIds = Object.keys(COIN_MAP).filter(id => prices[id]);
+
+  // ===================== 渲染布局 =====================
+  return {
+    type: 'widget',
+    padding: 14,
+    backgroundColor: BG_MAIN, // 关键：深浅自适应背景
+    refreshPolicy: { onEnter: true, timeout: 60 },
+    children: [
+      // Header 头部
+      { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
+          { type: 'image', src: "sf-symbol:chart.line.uptrend.xyaxis.circle.fill", color: IC_GOLD, width: 16, height: 16 },
+          { type: 'text', text: "Crypto Market", font: { size: 14, weight: 'heavy' }, textColor: C_TITLE },
+          { type: 'spacer' },
+          { type: 'text', text: delay > 0 ? `${delay}ms` : statusTxt, font: { size: 11, weight: 'bold', family: 'Menlo' }, textColor: delayColor }
+      ]},
+      { type: 'spacer', length: 12 },
+      
+      // 币种列表
+      { type: 'stack', direction: 'column', gap: 5, children: 
+          coinIds.length > 0 ? 
+          coinIds.map(id => CoinRow(id, prices[id])) : 
+          [{ type: 'text', text: "数据获取失败，请检查网络", font: { size: 11 }, textColor: C_SUB }]
+      },
+      
+      { type: 'spacer' },
+      
+      // Footer 底部
+      { type: 'stack', direction: 'row', alignItems: 'center', children: [
+          { type: 'image', src: "sf-symbol:clock.arrow.circlepath", color: C_SUB, width: 9, height: 9 },
+          { type: 'spacer', length: 4 },
+          { type: 'date', date: new Date().toISOString(), format: "relative", font: { size: 9 }, textColor: C_SUB },
+          { type: 'spacer' },
+          { type: 'text', text: "CoinGecko Data", font: { size: 9 }, textColor: C_SUB }
+      ]}
+    ]
+  };
 }
