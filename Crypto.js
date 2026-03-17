@@ -1,6 +1,6 @@
 /**
- * 🚀 Crypto Price Widget (终极修复版 - 仅使用标准 Hex)
- * 逻辑与底色完全同步 BWH 流量监控面板，彻底解决深色模式下变白的问题
+ * 🚀 Crypto Price Widget (终极对齐 + 秒切修复版)
+ * 结构与配色 100% 对齐 BWH 流量监控面板
  */
 
 const COINS = "bitcoin,ethereum,solana,binancecoin,ripple,dogecoin,cardano,avalanche-2";
@@ -20,36 +20,20 @@ const COIN_MAP = {
 const CACHE_KEY = "crypto_prices_cache";
 
 export default async function(ctx) {
-  // 🎨 移除所有 rgba，全部采用最稳妥的标准 Hex 颜色对象
+  // 🎨 纯血统自适应配色 (100% 对应流量监控)
   const BG_MAIN    = { light: '#FFFFFF', dark: '#0D0D1A' }; 
   const TEXT_MAIN  = { light: '#1C1C1E', dark: '#FFFFFF' }; 
   const TEXT_SUB   = { light: '#8E8E93', dark: '#EBEBF5' }; 
-  const DIVIDER    = { light: '#E5E5EA', dark: '#2C2C2E' }; // 替换了容易出错的 rgba
+  const DIVIDER    = { light: '#E5E5EA', dark: '#2C2C2E' }; 
   
   const C_GOLD     = { light: '#FF9500', dark: '#FFD700' }; 
   const C_GREEN    = { light: '#34C759', dark: '#32D74B' }; 
   const C_RED      = { light: '#FF3B30', dark: '#FF453A' }; 
 
-  // --- 基础工具 ---
   const formatPrice = (p) => p >= 1000 ? "$" + p.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",") : (p >= 1 ? "$" + p.toFixed(2) : "$" + p.toFixed(4));
   const formatChange = (c) => (c >= 0 ? "+" : "") + (c || 0).toFixed(1) + "%";
 
-  const txt = (text, fontSize, weight, color) => ({
-    type: "text",
-    text: text,
-    font: { weight: weight || "regular", size: fontSize, family: "Menlo" },
-    textColor: color || TEXT_MAIN
-  });
-
-  const icon = (name, size, color) => ({
-    type: "image",
-    src: "sf-symbol:" + name,
-    width: size,
-    height: size,
-    color: color
-  });
-
-  // --- 列表行渲染 ---
+  // --- 列表行渲染 (修复对齐) ---
   const coinRow = (id, data) => {
     const info = COIN_MAP[id];
     const change = data.usd_24h_change;
@@ -57,25 +41,24 @@ export default async function(ctx) {
       type: "stack",
       direction: "row",
       alignItems: "center",
-      gap: 8,
+      gap: 6,
       children: [
-        // 使用一个极其稳妥的透明度写法（Hex 8位，末尾22代表低透明度）
         {
           type: "stack",
           padding: 4,
           backgroundColor: info.color + "22", 
           borderRadius: 8,
-          children: [icon(info.icon, 14, info.color)]
+          children: [{ type: "image", src: "sf-symbol:" + info.icon, width: 14, height: 14, color: info.color }]
         },
-        txt(info.symbol, 13, "medium"),
+        { type: "text", text: info.symbol, font: { size: 13, weight: "medium", family: "Menlo" }, textColor: TEXT_MAIN },
         { type: "spacer" },
-        txt(formatPrice(data.usd), 13, "bold"),
-        txt(formatChange(change), 12, "semibold", change >= 0 ? C_GREEN : C_RED)
+        { type: "text", text: formatPrice(data.usd), font: { size: 13, weight: "bold", family: "Menlo" }, textColor: TEXT_MAIN },
+        { type: "text", text: formatChange(change), font: { size: 12, weight: "bold", family: "Menlo" }, textColor: change >= 0 ? C_GREEN : C_RED }
       ]
     };
   };
 
-  // --- 数据获取 ---
+  // --- 获取数据 ---
   let prices;
   try {
     const resp = await ctx.http.get(API_URL);
@@ -84,35 +67,35 @@ export default async function(ctx) {
   } catch (e) {
     const cached = ctx.storage.getJSON(CACHE_KEY);
     prices = cached ? cached.prices : null;
-    if (!prices) return { type: "widget", backgroundColor: BG_MAIN, children: [txt("Error", 14, "bold", C_RED)] };
+    if (!prices) return { type: "widget", backgroundColor: BG_MAIN, children: [{ type: "text", text: "Error" }] };
   }
 
   const ids = Object.keys(prices).filter(id => COIN_MAP[id]);
   const family = ctx.widgetFamily || "systemMedium";
-  const rows = ids.slice(0, family === "systemSmall" ? 4 : 8).map(id => coinRow(id, prices[id]));
+  const rows = ids.slice(0, 8).map(id => coinRow(id, prices[id]));
 
-  // --- 最终输出 ---
   return {
     type: "widget",
     padding: 14,
     backgroundColor: BG_MAIN,
     refreshPolicy: { onEnter: true, timeout: 60 },
     children: [
+      // 顶部
       {
         type: "stack",
         direction: "row",
         alignItems: "center",
         children: [
-          icon("chart.line.uptrend.xyaxis.circle.fill", 16, C_GOLD),
-          { type: "spacer", length: 4 },
-          txt("Crypto Tracker", 14, "heavy", C_GOLD),
+          { type: "image", src: "sf-symbol:chart.line.uptrend.xyaxis.circle.fill", width: 16, height: 16, color: C_GOLD },
+          { type: "spacer", length: 6 },
+          { type: "text", text: "Crypto Tracker", font: { size: 14, weight: "heavy" }, textColor: C_GOLD },
           { type: "spacer" },
           { type: "date", date: new Date().toISOString(), format: "time", font: { size: 10 }, textColor: TEXT_SUB }
         ]
       },
       { type: "spacer", length: 10 },
       // 分割线
-      { type: "stack", height: 1, backgroundColor: DIVIDER, children: [{ type: "spacer" }] },
+      { type: "stack", height: 1, backgroundColor: DIVIDER },
       { type: "spacer", length: 10 },
       // 列表主体
       family === "systemMedium" ? {
@@ -121,10 +104,10 @@ export default async function(ctx) {
         gap: 12,
         children: [
           { type: "stack", direction: "column", gap: 6, flex: 1, children: rows.slice(0, 4) },
-          { type: "stack", width: 1, backgroundColor: DIVIDER, height: 80, children: [{ type: "spacer" }] },
+          { type: "stack", width: 1, backgroundColor: DIVIDER, height: 80 },
           { type: "stack", direction: "column", gap: 6, flex: 1, children: rows.slice(4, 8) }
         ]
-      } : { type: "stack", direction: "column", gap: 6, children: rows },
+      } : { type: "stack", direction: "column", gap: 6, children: rows.slice(0, 4) },
       { type: "spacer" }
     ]
   };
