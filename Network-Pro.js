@@ -3,19 +3,19 @@
  * 集成：双 IP 检测、网络类型、真实延迟、流媒体解锁 (NF/GPT/TK/GMNI/D+)、IP 纯净度
  */
 export default async function(ctx) {
-  // ===================== iOS 深浅自适应颜色常量 =====================
-  // 弃用 backgroundGradient，改用系统原生支持完美的纯色 backgroundColor
-  const BG_MAIN   = { light: '#FFFFFF', dark: '#0D0D1A' }; // 浅色纯白，深色黑紫
-  const C_MAIN    = { light: '#1C1C1E', dark: '#FFFFFF' }; // 浅色黑，深色白
+  // ===================== iOS 深浅自适应原生颜色 =====================
+  // 完全弃用 backgroundGradient，改用系统秒识别的 backgroundColor
+  const BG_MAIN   = { light: '#FFFFFF', dark: '#0D0D1A' }; // 浅色纯白，深色深紫
+  const C_MAIN    = { light: '#1C1C1E', dark: '#FFFFFF' }; // 浅色纯黑，深色纯白
   const C_SUB     = { light: '#8E8E93', dark: '#A2A2B5' }; // 浅色灰，深色透白
   
-  const C_TITLE   = { light: '#FF9500', dark: '#FFD700' }; // 浅色橙，深色金
-  const C_GREEN   = { light: '#34C759', dark: '#32D74B' }; // iOS 绿
-  const C_YELLOW  = { light: '#FFCC00', dark: '#FFD60A' }; // iOS 黄
-  const C_RED     = { light: '#FF3B30', dark: '#FF3B30' }; // iOS 红
+  const C_TITLE   = { light: '#1C1C1E', dark: '#FFFFFF' }; // 标题文字：黑/白
+  const C_GREEN   = { light: '#34C759', dark: '#32D74B' }; // 强调绿：iOS绿/亮绿
+  const C_YELLOW  = { light: '#FF9500', dark: '#FFD700' }; // 强调黄：iOS橙/金黄
+  const C_RED     = { light: '#FF3B30', dark: '#FF3B30' }; // 强调红
   
-  const IC_BLUE   = { light: '#007AFF', dark: '#00AAE4' }; // 浅色原生蓝，深色亮蓝
-  const IC_PURPLE = { light: '#AF52DE', dark: '#9945FF' }; // 浅色原生紫，深色亮紫
+  const IC_BLUE   = { light: '#007AFF', dark: '#00AAE4' }; // 图标蓝：iOS蓝/亮蓝
+  const IC_PURPLE = { light: '#AF52DE', dark: '#9945FF' }; // 图标紫：iOS紫/亮紫
 
   // ===================== 辅助函数 =====================
   const fmtISP = (isp) => {
@@ -160,7 +160,7 @@ export default async function(ctx) {
   return {
     type: 'widget', 
     padding: 14,
-    // ✨ 移除 backgroundGradient，改用系统原生完美支持的纯色 backgroundColor
+    // ✨ 这里是变色生效的核心，采用纯色背景
     backgroundColor: BG_MAIN,
     refreshPolicy: { onNetworkChange: true, onEnter: true, timeout: 10 },
     children: [
@@ -172,14 +172,14 @@ export default async function(ctx) {
       ]},
       { type: 'spacer', length: 12 },
       { type: 'stack', direction: 'column', gap: 4, children: [
-          Row("house.fill", IC_BLUE, "本地 IP", lIp, C_GREEN),
+          Row("house.fill", IC_BLUE, "本地 IP", lIp, C_MAIN),
           Row("map.fill", IC_BLUE, "本地位置", `${lLoc} ${lIsp}`, C_MAIN),
           { type: 'spacer', length: 2 },
-          Row("network", IC_PURPLE, "落地 IP", `${nIp} (${nativeText.split(' ')[1]})`, C_GREEN),
+          Row("network", IC_PURPLE, "落地 IP", `${nIp} (${nativeText.split(' ')[1]})`, C_MAIN),
           Row("mappin.and.ellipse", IC_PURPLE, "落地位置", `${nLoc} ${nIsp}`, C_MAIN),
           { type: 'spacer', length: 2 },
           Row(riskIc, riskCol, "风险评级", riskTxt, riskCol),
-          Row("play.tv.fill", C_TITLE, "解锁", unlockText, C_MAIN)
+          Row("play.tv.fill", C_TITLE, "解锁", unlockText, C_GREEN)
       ]},
       { type: 'spacer' }
     ]
