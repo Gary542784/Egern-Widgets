@@ -1,6 +1,6 @@
 /**
- * 🚀 Crypto Price Widget (终极对齐 + 秒切修复版)
- * 结构与配色 100% 对齐 BWH 流量监控面板
+ * 🚀 Crypto Price Widget (像素级对齐 + 真·自适应版)
+ * 彻底修复排版偏移与分割线 Bug，支持深浅模式秒切
  */
 
 const COINS = "bitcoin,ethereum,solana,binancecoin,ripple,dogecoin,cardano,avalanche-2";
@@ -20,11 +20,11 @@ const COIN_MAP = {
 const CACHE_KEY = "crypto_prices_cache";
 
 export default async function(ctx) {
-  // 🎨 纯血统自适应配色 (100% 对应流量监控)
+  // 🎨 纯正的原生自适应颜色对象
   const BG_MAIN    = { light: '#FFFFFF', dark: '#0D0D1A' }; 
   const TEXT_MAIN  = { light: '#1C1C1E', dark: '#FFFFFF' }; 
   const TEXT_SUB   = { light: '#8E8E93', dark: '#EBEBF5' }; 
-  const DIVIDER    = { light: '#E5E5EA', dark: '#2C2C2E' }; 
+  const LINE_COLOR = { light: '#E5E5EA', dark: '#2C2C2E' }; 
   
   const C_GOLD     = { light: '#FF9500', dark: '#FFD700' }; 
   const C_GREEN    = { light: '#34C759', dark: '#32D74B' }; 
@@ -33,7 +33,7 @@ export default async function(ctx) {
   const formatPrice = (p) => p >= 1000 ? "$" + p.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",") : (p >= 1 ? "$" + p.toFixed(2) : "$" + p.toFixed(4));
   const formatChange = (c) => (c >= 0 ? "+" : "") + (c || 0).toFixed(1) + "%";
 
-  // --- 列表行渲染 (修复对齐) ---
+  // --- 列表行渲染 (优化对齐与间距) ---
   const coinRow = (id, data) => {
     const info = COIN_MAP[id];
     const change = data.usd_24h_change;
@@ -41,19 +41,26 @@ export default async function(ctx) {
       type: "stack",
       direction: "row",
       alignItems: "center",
-      gap: 6,
+      gap: 8,
       children: [
         {
           type: "stack",
           padding: 4,
           backgroundColor: info.color + "22", 
           borderRadius: 8,
-          children: [{ type: "image", src: "sf-symbol:" + info.icon, width: 14, height: 14, color: info.color }]
+          children: [{ type: "image", src: "sf-symbol:" + info.icon, width: 13, height: 13, color: info.color }]
         },
-        { type: "text", text: info.symbol, font: { size: 13, weight: "medium", family: "Menlo" }, textColor: TEXT_MAIN },
+        { type: "text", text: info.symbol, font: { size: 12, weight: "bold", family: "Menlo" }, textColor: TEXT_MAIN },
         { type: "spacer" },
-        { type: "text", text: formatPrice(data.usd), font: { size: 13, weight: "bold", family: "Menlo" }, textColor: TEXT_MAIN },
-        { type: "text", text: formatChange(change), font: { size: 12, weight: "bold", family: "Menlo" }, textColor: change >= 0 ? C_GREEN : C_RED }
+        {
+          type: "stack",
+          direction: "column",
+          alignItems: "end",
+          children: [
+            { type: "text", text: formatPrice(data.usd), font: { size: 12, weight: "bold", family: "Menlo" }, textColor: TEXT_MAIN },
+            { type: "text", text: formatChange(change), font: { size: 10, weight: "bold", family: "Menlo" }, textColor: change >= 0 ? C_GREEN : C_RED }
+          ]
+        }
       ]
     };
   };
@@ -76,11 +83,11 @@ export default async function(ctx) {
 
   return {
     type: "widget",
-    padding: 14,
+    padding: [12, 14],
     backgroundColor: BG_MAIN,
     refreshPolicy: { onEnter: true, timeout: 60 },
     children: [
-      // 顶部
+      // 头部栏
       {
         type: "stack",
         direction: "row",
@@ -94,20 +101,27 @@ export default async function(ctx) {
         ]
       },
       { type: "spacer", length: 10 },
-      // 分割线
-      { type: "stack", height: 1, backgroundColor: DIVIDER },
-      { type: "spacer", length: 10 },
-      // 列表主体
+      // 顶部全宽分割线
+      { type: "stack", height: 1, backgroundColor: LINE_COLOR },
+      { type: "spacer", length: 12 },
+      // 列表主体 (通过 flex: 1 强制左右对齐)
       family === "systemMedium" ? {
         type: "stack",
         direction: "row",
-        gap: 12,
+        gap: 16,
         children: [
-          { type: "stack", direction: "column", gap: 6, flex: 1, children: rows.slice(0, 4) },
-          { type: "stack", width: 1, backgroundColor: DIVIDER, height: 80 },
-          { type: "stack", direction: "column", gap: 6, flex: 1, children: rows.slice(4, 8) }
+          { type: "stack", direction: "column", gap: 8, flex: 1, children: rows.slice(0, 4) },
+          // 中间竖线：增加上下 padding，防止顶天立地，更有呼吸感
+          { 
+            type: "stack", 
+            width: 1, 
+            backgroundColor: LINE_COLOR, 
+            marginTop: 4, 
+            marginBottom: 4 
+          },
+          { type: "stack", direction: "column", gap: 8, flex: 1, children: rows.slice(4, 8) }
         ]
-      } : { type: "stack", direction: "column", gap: 6, children: rows.slice(0, 4) },
+      } : { type: "stack", direction: "column", gap: 8, children: rows.slice(0, 4) },
       { type: "spacer" }
     ]
   };
