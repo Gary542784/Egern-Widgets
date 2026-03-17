@@ -16,7 +16,7 @@ export default async function (ctx) {
   const TEXT_SUB   = { light: '#8E8E93', dark: '#EBEBF5' }; // 副标题灰度
   const BAR_BG     = { light: '#E5E5EA', dark: '#2C2C2E' }; // 进度条底槽颜色
 
-  const C_TITLE = { light: '#000000', dark: '#FFFFFF' }; // 标题：橙/金
+  const C_TITLE    = { light: '#000000', dark: '#FFFFFF' }; // 标题：橙/金
   const C_GREEN    = { light: '#34C759', dark: '#32D74B' }; // 安全：iOS绿/亮绿
   const C_YELLOW   = { light: '#FFCC00', dark: '#FFD60A' }; // 警告：iOS黄/亮黄
   const C_RED      = { light: '#FF3B30', dark: '#FF3B30' }; // 危险：红
