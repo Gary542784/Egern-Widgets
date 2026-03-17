@@ -1,16 +1,17 @@
 /**
- * ⛽ 全国油价（极致黑白 Pro - 布局最终修正版）
- * 🛠 修复：强制下移底部信息，通过加大固定间距和压缩底部 Padding 实现
+ * ⛽ 全国油价（自适应黑白 Pro - 最终排错版）
+ * 🛠 修复：恢复了 light 模式的白色背景，修复“全黑”问题，保留布局下沉
  */
 
 export default async function (ctx) {
+  // 1. 🚀 排错核心：将 light 设为白色(#FFFFFF)，txt 设为黑色(#000000)
   const T = {
-    bg: { light: '#000000', dark: '#000000' }, // 强制深色背景以对齐你的截图风格
-    txt: { light: '#FFFFFF', dark: '#FFFFFF' },
-    sub: { light: '#8E8E93', dark: '#8E8E93' },
-    line: { light: '#1C1C1E', dark: '#1C1C1E' },
-    accent: { light: '#FFD700', dark: '#FFD700' },
-    block: { light: '#1C1C1E', dark: '#1C1C1E' }
+    bg: { light: '#FFFFFF', dark: '#000000' },     // 背景自适应
+    txt: { light: '#000000', dark: '#FFFFFF' },    // 文字自适应
+    sub: { light: '#8E8E93', dark: '#8E8E93' },    // 副标题灰色
+    line: { light: '#E5E5EA', dark: '#1C1C1E' },   // 分隔线自适应
+    accent: { light: '#FF9500', dark: '#FFD700' },  // 强调色
+    block: { light: '#F2F2F7', dark: '#1C1C1E' }   // 数值方块背景自适应
   };
 
   const CAL_2026 = [
@@ -30,7 +31,7 @@ export default async function (ctx) {
     }
   }
 
-  let region = "加载中", trend = "获取调价趋势...", trendCol = T.sub;
+  let region = "成都", trend = "获取中...", trendCol = T.sub;
   let p = { p92: "--", p95: "--", p98: "--", diesel: "--" };
 
   try {
@@ -54,18 +55,16 @@ export default async function (ctx) {
       const d = tMatch[1].match(/(\d{1,2}月\d{1,2}日)/)?.[1] || "";
       const amt = tMatch[2].match(/[\d\.]+\s*元\/升/g)?.[0] || "";
       trend = `${d}${isUp?'上涨':isDown?'下调':'调价'} ${amt}`;
-      trendCol = isUp ? '#FF453A' : (isDown ? '#32D74B' : T.sub);
+      trendCol = isUp ? '#FF453A' : (isDown ? '#34C759' : T.sub);
     }
-  } catch (e) { region = "成都"; }
+  } catch (e) {}
 
   return {
     type: "widget", 
-    // 🚀 调整内边距：[上, 右, 下, 左]，减小底部边距
-    padding: [16, 16, 10, 16], 
+    padding: [16, 16, 10, 16], // 保持底部紧凑
     backgroundColor: T.bg,
     children: [
       { type: 'spacer', length: 5 },
-      // 头部
       { type: "stack", direction: "row", alignItems: "center", children: [
           { type: "image", src: "sf-symbol:fuelpump.fill", width: 16, height: 16, color: T.accent },
           { type: 'spacer', length: 6 },
@@ -92,9 +91,9 @@ export default async function (ctx) {
           ]
       }))},
 
-      // 🚀 核心改动：使用更大的固定间距把底部文字推下去
-      { type: 'spacer', length: 30 }, 
-      { type: 'spacer' }, // 弹性补充
+      // 布局下沉：使用弹性间距
+      { type: 'spacer', length: 25 }, 
+      { type: 'spacer' }, 
       
       // 底部 (时间 & 趋势)
       { type: "stack", direction: "row", alignItems: "center", children: [
