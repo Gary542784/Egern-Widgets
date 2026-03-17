@@ -73,7 +73,6 @@ export default async function(ctx) {
     } catch (e) { return { name, region: "❌" }; }
   };
 
-  // 💡 扩展解锁队列：GPT, 奈飞, TikTok, Gemini, Disney+
   const unlockTasks = [
     checkUnlock("GPT", "https://chatgpt.com/", async (res) => res.status >= 200 && res.status < 400),
     checkNetflix(),
@@ -86,8 +85,9 @@ export default async function(ctx) {
   const globalStart = Date.now();
   let realTcpDelay = 0;
 
+  // 💡 使用 Google 官方 204 探针，测速更准、更纯粹
   const [pingTask, lResRaw, nResRaw, pureResRaw, ...unlockResults] = await Promise.all([
-    ctx.http.get("https://1.1.1.1/cdn-cgi/trace", { timeout: 2500 })
+    ctx.http.get("http://connectivitycheck.gstatic.com/generate_204", { timeout: 2000 })
       .then(() => { realTcpDelay = Date.now() - globalStart; }).catch(() => {}),
     ctx.http.get('https://myip.ipip.net/json', { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 4000 }).catch(() => null),
     ctx.http.get('http://ip-api.com/json/?lang=zh-CN', { timeout: 4000 }).catch(() => null),
@@ -132,7 +132,6 @@ export default async function(ctx) {
 
   const nativeText = pureData.isResidential === true ? "🏠 住宅" : (pureData.isResidential === false ? "🏢 机房" : "🌐 代理");
 
-  // 💡 紧凑排版：使用纯空格分隔，防止文字太长被过度缩小
   const unlockText = unlockResults.map(r => {
     if (r.region === "❌" || r.region === "🍿") return `${r.name}:${r.region}`;
     const finalReg = (r.region && r.region !== "OK") ? r.region : (nCountryCode || "OK");
