@@ -1,20 +1,19 @@
 /**
- * 🚀 全功能网络看板 Pro (完美复刻左对齐版 · 修复网关与排版截断)
- * 优化：双重引擎读取内网网关、解除底行截断限制、完美沉浸式左对齐
+ * 🚀 全功能网络看板 Pro (沉浸左对齐版 · 新增机房提供商)
+ * 优化：在属性栏精准提取并显示 VPS/机房商家名称，增强排版美观度
  */
 export default async function(ctx) {
   // ===================== iOS 深浅自适应主题 =====================
   const BG_MAIN   = { light: '#FFFFFF', dark: '#1C1C1E' }; 
-  const C_TEXT    = { light: '#333333', dark: '#E5E5EA' }; // 右侧数值颜色
+  const C_TEXT    = { light: '#333333', dark: '#E5E5EA' }; 
   const C_SUB     = { light: '#8E8E93', dark: '#8E8E93' }; 
-  const C_TITLE   = { light: '#111111', dark: '#FFFFFF' }; // 顶部大标题颜色
+  const C_TITLE   = { light: '#111111', dark: '#FFFFFF' }; 
   
-  // 截图同款标签颜色
-  const C_GREEN   = { light: '#34C759', dark: '#30D158' }; // 内网
-  const C_BLUE    = { light: '#007AFF', dark: '#0A84FF' }; // 本地
-  const C_PURPLE  = { light: '#5856D6', dark: '#5E5CE6' }; // 节点
-  const C_ORANGE  = { light: '#FF9500', dark: '#FF9F0A' }; // 解锁
-  const C_RED     = { light: '#FF3B30', dark: '#FF453A' }; // 高危/延迟
+  const C_GREEN   = { light: '#34C759', dark: '#30D158' }; 
+  const C_BLUE    = { light: '#007AFF', dark: '#0A84FF' }; 
+  const C_PURPLE  = { light: '#5856D6', dark: '#5E5CE6' }; 
+  const C_ORANGE  = { light: '#FF9500', dark: '#FF9F0A' }; 
+  const C_RED     = { light: '#FF3B30', dark: '#FF453A' }; 
 
   // ===================== 辅助函数 =====================
   const fmtLocalISP = (isp) => {
@@ -27,18 +26,35 @@ export default async function(ctx) {
     return isp; 
   };
 
+  // 增强版机房提供商美化格式
+  const fmtProxyISP = (isp) => {
+    if (!isp) return "未知商家";
+    let s = String(isp);
+    if (/it7/i.test(s)) return "IT7 Network";
+    if (/dmit/i.test(s)) return "DMIT Network";
+    if (/cloudflare/i.test(s)) return "Cloudflare";
+    if (/akamai/i.test(s)) return "Akamai";
+    if (/amazon|aws/i.test(s)) return "AWS";
+    if (/google/i.test(s)) return "Google Cloud";
+    if (/microsoft|azure/i.test(s)) return "Microsoft Azure";
+    if (/alibaba|aliyun/i.test(s)) return "阿里云";
+    if (/tencent/i.test(s)) return "腾讯云";
+    if (/oracle/i.test(s)) return "Oracle Cloud";
+    // 如果名字过长，截取前 15 个字符保证排版不崩
+    return s.length > 15 ? s.substring(0, 15) + "..." : s; 
+  };
+
   const getFlag = (code) => {
     if (!code || code.toUpperCase() === 'TW') return '🇨🇳'; 
     if (code.toUpperCase() === 'XX' || code === 'OK') return '✅';
     return String.fromCodePoint(...code.toUpperCase().split('').map(c => 127397 + c.charCodeAt()));
   };
 
-  // ===================== 修复：双引擎获取网络状态与网关 =====================
+  // 双引擎获取网络状态与网关
   const d = ctx.device || {};
   const isWifi = !!d.wifi?.ssid;
   let netName = "未连接", netIcon = "wifi";
   
-  // 深度兼容 Egern / Surge 的底层网络变量
   const netInfo = (typeof $network !== 'undefined') ? $network : (ctx.network || {});
   let localIp = netInfo.v4?.primaryAddress || "—";
   let gateway = netInfo.v4?.primaryRouter || "—";
@@ -164,7 +180,7 @@ export default async function(ctx) {
     }
   } catch (e) {}
 
-  let nIp = "—", nLoc = "—", asn = "—", nCountryCode = "XX";
+  let nIp = "—", nLoc = "—", asn = "—", nCountryCode = "XX", proxyProvider = "—";
   try {
     if (nResRaw) {
       const nData = JSON.parse(await nResRaw.text());
@@ -174,6 +190,9 @@ export default async function(ctx) {
       
       const asnMatch = nData.as ? nData.as.match(/(AS\d+)/) : null;
       asn = asnMatch ? asnMatch[1] : "未知ASN";
+      
+      // ✅ 获取并格式化机房提供商 (ISP/Org)
+      proxyProvider = fmtProxyISP(nData.isp || nData.org);
     }
   } catch (e) {}
 
@@ -193,7 +212,6 @@ export default async function(ctx) {
     else { riskTxt = `低危 (${risk})`; riskCol = C_GREEN; }
   }
 
-  // 解锁排版优化：使用普通空格自然连接，防止超长打断
   const unlockText = unlockResults.map(r => {
     if (r.region === "❌") return `${r.name}:🚫`;
     if (r.region === "🍿") return `${r.name}:🍿`;
@@ -212,7 +230,6 @@ export default async function(ctx) {
   const headerTitle = lIsp !== "未知" ? `${lIsp} · ${netName}` : netName;
 
   // ===================== UI 布局组件 (完美左对齐复刻) =====================
-  // 核心改动：isLast 判定是否为最后一行，最后一行允许自动换行，解除 maxLines 限制
   const Row = (ic, labelCol, label, val, isLast = false) => ({
     type: 'stack', direction: 'row', alignItems: 'center', gap: 6, padding: [2.5, 0],
     children: [
@@ -244,8 +261,9 @@ export default async function(ctx) {
           Row("house.fill", C_GREEN, "内网", ` ${localIp} / ${gateway}`),
           Row("paperplane.circle.fill", C_BLUE, "本地", ` ${lIp} / ${lLoc}`),
           Row("globe", C_PURPLE, "落地", ` ${nIp} / ${getFlag(nCountryCode)} ${nLoc} / ${asn}`),
-          Row("shield.lefthalf.filled", riskCol, "属性", ` ${ipTypeStr} / ${riskTxt}`),
-          Row("play.tv.fill", C_ORANGE, "解锁", ` ${unlockText}`, true) // true：最后一行允许换行，不截断
+          // ✅ 机房提供商添加到这里：商家 / 类型 / 风险
+          Row("shield.lefthalf.filled", riskCol, "属性", ` ${proxyProvider} / ${ipTypeStr} / ${riskTxt}`),
+          Row("play.tv.fill", C_ORANGE, "解锁", ` ${unlockText}`, true) 
       ]},
       { type: 'spacer' }
     ]
