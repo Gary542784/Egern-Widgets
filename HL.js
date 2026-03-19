@@ -1,15 +1,16 @@
 export default async function(ctx) {
   // 🎨 纯正的 iOS 系统级动态颜色对象 (交由系统原生切换，绝不卡死)
   const C = {
-    bg: { light: '#FFFFFF', dark: '#0D0D1A' },       // 纯色背景：浅色白，深色黑紫
+    bg: { light: '#FFFFFF', dark: '#121212' },       // 🌟 修复：彻底去除了泛蓝光的 #0D0D1A，改为纯净的 #121212
     main: { light: '#1C1C1E', dark: '#FFFFFF' },     // 主文本：浅色黑，深色白
-    sub: { light: '#48484A', dark: '#EBEBF5' },      // 副文本
+    sub: { light: '#48484A', dark: '#D1D1D6' },      // 副文本
     muted: { light: '#8E8E93', dark: '#8E8E93' },    // 弱化文本
     divider: { light: '#E5E5EA', dark: '#38383A' },  // 分割线
     gold: { light: '#FF9500', dark: '#FFD700' },     // 金色/橙色
-    yi: { light: '#34C759', dark: '#32D74B' },       // 宜：绿色
+    yi: { light: '#34C759', dark: '#30D158' },       // 宜：绿色
     ji: { light: '#FF3B30', dark: '#FF453A' },       // 忌：红色
-    term: { light: '#007AFF', dark: '#00AAE4' },     // 节气：蓝色
+    term: { light: '#34C759', dark: '#30D158' },     // 🌟 修复：节气改为绿色
+    holiday: { light: '#007AFF', dark: '#0A84FF' },  // 🌟 新增：法定节日专属蓝色
     transparent: '#00000000'
   };
 
@@ -131,7 +132,6 @@ export default async function(ctx) {
   }
 
   // --- 扩充后的核心法定及传统节假日倒数 ---
-  // 加入了 nL（下一天的农历信息），专门用于精准判断除夕（第二天是正月初一）
   const targetHolidays = [
     { name: "元旦", match: (m, d, l, nL) => m === 1 && d === 1 },
     { name: "除夕", match: (m, d, l, nL) => nL.cn === "正月初一" },
@@ -154,7 +154,6 @@ export default async function(ctx) {
   let foundHolidays = new Set();
   
   for (let i = 1; i <= 365; i++) {
-    // 同时计算当前日期和下一天的日期（为了判断除夕）
     let tempDate = new Date(todayMs + i * 86400000);
     let nextDate = new Date(todayMs + (i + 1) * 86400000);
     
@@ -170,8 +169,8 @@ export default async function(ctx) {
         foundHolidays.add(h.name);
       }
     }
-    // 修改这里：现在最多展示 3 个节假日，排版会稍微丰富一些
-    if (upcomingHolidays.length >= 3) break; 
+    // 🌟 修复：放宽展示限制，确保至少显示 4 个法定节假日
+    if (upcomingHolidays.length >= 4) break; 
   }
 
   let finalHolidayText = upcomingHolidays.join(", ");
@@ -221,7 +220,9 @@ export default async function(ctx) {
   const dynamicGap = gridLen <= 2 ? 9 : (gridLen === 3 ? 6 : 4);
 
   return {
-    type: 'widget', padding: 12, url: 'calshow://',
+    type: 'widget', 
+    padding: [14, 16], // 🌟 修复：左右增加到 16px，完美对齐其他所有卡片
+    url: 'calshow://',
     backgroundColor: C.bg, 
     children: [
       { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
@@ -251,12 +252,12 @@ export default async function(ctx) {
           ]},
           { type: 'stack', direction: 'row', alignItems: 'center', gap: 4, children: [
               { type: 'image', src: 'sf-symbol:leaf.arrow.circlepath', color: C.term, width: 13, height: 13 }, 
-              { type: 'text', text: "节气:", font: { size: 12, weight: 'bold' }, textColor: C.term },
+              { type: 'text', text: "节气:", font: { size: 12, weight: 'bold' }, textColor: C.term }, // 🌟 修复：节气图标和标签应用新绿色
               { type: 'text', text: upcomingTerms.join(", "), font: { size: 12, weight: 'medium' }, textColor: C.term, maxLines: 1, flex: 1 }
           ]},
           { type: 'stack', direction: 'row', alignItems: 'center', gap: 4, children: [
-              { type: 'image', src: 'sf-symbol:flag.fill', color: C.ji, width: 13, height: 13 },
-              { type: 'text', text: "假日:", font: { size: 12, weight: 'bold' }, textColor: C.ji },
+              { type: 'image', src: 'sf-symbol:flag.fill', color: C.holiday, width: 13, height: 13 },
+              { type: 'text', text: "法定:", font: { size: 12, weight: 'bold' }, textColor: C.holiday }, // 🌟 修复：标签改为“法定”，应用新蓝色
               { type: 'text', text: finalHolidayText, font: { size: 12, weight: 'medium' }, textColor: C.sub, maxLines: 1, flex: 1 }
           ]}
       ]},
