@@ -1,13 +1,14 @@
 /**
  * ==========================================
  * 📌 代码名称: 🌐 全功能网络看板 Pro (统一 UI 版)
+ * 🛠️ 布局优化版：自适应充满整个小组件
  * ==========================================
  */
 export default async function(ctx) {
   // 🎨 统一 UI 规范颜色
   const BG_MAIN   = { light: '#FFFFFF', dark: '#121212' }; 
-  const C_TEXT    = { light: '#1C1C1E', dark: '#FFFFFF' }; // 🌟 统一主色
-  const C_SUB     = { light: '#8E8E93', dark: '#8E8E93' }; // 🌟 统一弱化色
+  const C_TEXT    = { light: '#1C1C1E', dark: '#FFFFFF' }; 
+  const C_SUB     = { light: '#8E8E93', dark: '#8E8E93' }; 
   const C_TITLE   = { light: '#1C1C1E', dark: '#FFFFFF' }; 
   
   const C_GREEN   = { light: '#34C759', dark: '#30D158' }; 
@@ -222,8 +223,9 @@ export default async function(ctx) {
   const dNow = new Date();
   const timeStr = `${String(dNow.getHours()).padStart(2, '0')}:${String(dNow.getMinutes()).padStart(2, '0')}:${String(dNow.getSeconds()).padStart(2, '0')}`;
 
+  // 🛠️ 优化 1：去掉单行固定的上下 Padding，交由外层 Stack 的 gap 来控制间距，使多行文本对齐更规整
   const Row = (ic, labelCol, label, val, isLast = false) => ({
-    type: 'stack', direction: 'row', alignItems: 'center', gap: 6, padding: [2.5, 0],
+    type: 'stack', direction: 'row', alignItems: 'center', gap: 6,
     children: [
       { type: 'image', src: `sf-symbol:${ic}`, color: labelCol, width: 13, height: 13 },
       { type: 'text', text: label, font: { size: 12, weight: 'bold' }, textColor: labelCol },
@@ -234,10 +236,11 @@ export default async function(ctx) {
 
   return {
     type: 'widget', 
-    padding: [14, 16], // 🌟 统一边距
+    padding: [16, 16], // 🛠️ 优化 2：统一四周边距，让内容框架稍微向内收敛一点，避免贴边
     backgroundColor: BG_MAIN, 
     refreshPolicy: { onNetworkChange: true, onEnter: true, timeout: 10 },
     children: [
+      // --- 头部 ---
       { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
           { type: 'image', src: `sf-symbol:${netIcon}`, color: C_TITLE, width: 16, height: 16 },
           { type: 'text', text: headerTitle, font: { size: 14, weight: 'heavy' }, textColor: C_TITLE },
@@ -247,15 +250,23 @@ export default async function(ctx) {
              { type: 'text', text: realTcpDelay > 0 ? `${realTcpDelay} ms` : '超时', font: { size: 12, weight: 'bold' }, textColor: delayColor }
           ]}
       ]},
-      { type: 'spacer', length: 10 },
-      { type: 'stack', direction: 'column', gap: 1, children: [
+      
+      // 🛠️ 优化 3：用弹性 Spacer 替换原本固定的 `length: 10`
+      { type: 'spacer' }, 
+      
+      // --- 主体数据内容 ---
+      { type: 'stack', direction: 'column', gap: 6, children: [ // 🛠️ 优化 4：行间距 gap 由 1 增大到 6，让数据行展开填充
           Row("house.fill", C_GREEN, "内网", ` ${localIp} / ${gateway}`),
           Row("paperplane.circle.fill", C_BLUE, "本地", ` ${lIp} / ${lLoc}`),
           Row("globe", C_PURPLE, "落地", ` ${nIp} / ${getFlag(nCountryCode)} ${nLoc} / ${asn}`),
           Row("shield.lefthalf.filled", riskCol, "属性", ` ${proxyProvider} / ${ipTypeStr} / ${riskTxt}`),
           Row("play.tv.fill", C_ORANGE, "解锁", ` ${unlockText}`, true) 
       ]},
+      
+      // 🛠️ 优化 5：底部再加一个弹性 Spacer。上下两个 Spacer 会把主体内容完美“顶”到垂直居中的位置
       { type: 'spacer' },
+      
+      // --- 底部时间 ---
       { type: 'stack', direction: 'row', alignItems: 'center', children: [
           { type: 'image', src: 'sf-symbol:arrow.triangle.2.circlepath', color: C_SUB, width: 9, height: 9 },
           { type: 'text', text: ` 刷新于 ${timeStr}`, font: { size: 10, weight: 'medium' }, textColor: C_SUB },
