@@ -1,23 +1,23 @@
 /**
- * 🚀 全功能网络看板 Pro (沉浸左对齐版 · 修复深色模式边框)
- * 优化：在属性栏精准提取并显示 VPS/机房商家名称，增强排版美观度
- * 新增：自适应深浅色模式的边框线与圆角，提升深色模式下的视觉层次
+ * 🚀 全功能网络看板 Pro (完美布局版 · 结合 Server Monitor 结构)
+ * 优化：移除破坏原生排版的手动边框，引入完美的卡片底色、横向分割线与对称式 Footer 排版
  */
 export default async function(ctx) {
-  // ===================== iOS 深浅自适应主题 =====================
-  const BG_MAIN   = { light: '#FFFFFF', dark: '#1C1C1E' }; 
-  const C_BORDER  = { light: '#E5E5EA', dark: '#38383A' }; // 新增：自适应边框颜色
-  const C_TEXT    = { light: '#333333', dark: '#E5E5EA' }; 
-  const C_SUB     = { light: '#8E8E93', dark: '#8E8E93' }; 
-  const C_TITLE   = { light: '#111111', dark: '#FFFFFF' }; 
-  
-  const C_GREEN   = { light: '#34C759', dark: '#30D158' }; 
-  const C_BLUE    = { light: '#007AFF', dark: '#0A84FF' }; 
-  const C_PURPLE  = { light: '#5856D6', dark: '#5E5CE6' }; 
-  const C_ORANGE  = { light: '#FF9500', dark: '#FF9F0A' }; 
-  const C_RED     = { light: '#FF3B30', dark: '#FF453A' }; 
+  // ===================== 1. 专属配色主题 (同步参考代码的高级感配色) =====================
+  const C = {
+    bg: { light: '#FFFFFF', dark: '#121212' },       // 高级深灰黑背景，恢复原生模块感
+    barBg: { light: '#0000001A', dark: '#FFFFFF22' },// 分割线颜色
+    text: { light: '#111111', dark: '#FFFFFF' },     // 主文字颜色
+    dim: { light: '#8E8E93', dark: '#8E8E93' },      // 暗淡辅助文字
+    
+    green: { light: '#34C759', dark: '#30D158' }, 
+    blue: { light: '#007AFF', dark: '#0A84FF' }, 
+    purple: { light: '#5856D6', dark: '#5E5CE6' }, 
+    orange: { light: '#FF9500', dark: '#FF9F0A' }, 
+    red: { light: '#FF3B30', dark: '#FF453A' }
+  };
 
-  // ===================== 辅助函数 =====================
+  // ===================== 2. 辅助函数 =====================
   const fmtLocalISP = (isp) => {
     if (!isp) return "未知";
     const s = String(isp).toLowerCase();
@@ -28,7 +28,6 @@ export default async function(ctx) {
     return isp; 
   };
 
-  // 增强版机房提供商美化格式
   const fmtProxyISP = (isp) => {
     if (!isp) return "未知商家";
     let s = String(isp);
@@ -42,7 +41,6 @@ export default async function(ctx) {
     if (/alibaba|aliyun/i.test(s)) return "阿里云";
     if (/tencent/i.test(s)) return "腾讯云";
     if (/oracle/i.test(s)) return "Oracle Cloud";
-    // 如果名字过长，截取前 15 个字符保证排版不崩
     return s.length > 15 ? s.substring(0, 15) + "..." : s; 
   };
 
@@ -52,7 +50,7 @@ export default async function(ctx) {
     return String.fromCodePoint(...code.toUpperCase().split('').map(c => 127397 + c.charCodeAt()));
   };
 
-  // 双引擎获取网络状态与网关
+  // ===================== 3. 网络与网关状态获取 =====================
   const d = ctx.device || {};
   const isWifi = !!d.wifi?.ssid;
   let netName = "未连接", netIcon = "wifi";
@@ -71,7 +69,7 @@ export default async function(ctx) {
     gateway = "蜂窝内网";
   }
 
-  // ===================== 高阶流媒体/AI 解锁检测核心算法 =====================
+  // ===================== 4. 解锁检测核心逻辑 =====================
   const BASE_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1";
   const commonHeaders = { "User-Agent": BASE_UA };
   const readBody = async (r) => {
@@ -136,8 +134,7 @@ export default async function(ctx) {
       const webAccessible = !!headRes && !!(headRes?.headers?.location || headRes?.headers?.Location);
       const iosRes = await ctx.http.get("https://ios.chat.openai.com", { timeout: 6000, headers: commonHeaders, followRedirect: true }).catch(() => null);
       const iosBody = await readBody(iosRes);
-      const appBlocked = !iosBody || iosBody.includes("blocked") || iosBody.includes("unsupported");
-      const appAccessible = !!iosBody && !appBlocked;
+      const appAccessible = !!iosBody && !(!iosBody || iosBody.includes("blocked") || iosBody.includes("unsupported"));
 
       if (!webAccessible && !appAccessible) return "❌";
       if (appAccessible && !webAccessible) return "APP";
@@ -150,7 +147,7 @@ export default async function(ctx) {
     } catch { return "❌"; }
   }
 
-  // ===================== 并发请求执行 =====================
+  // ===================== 5. 并发请求与数据解析 =====================
   const globalStart = Date.now();
   let realTcpDelay = 0;
 
@@ -170,7 +167,6 @@ export default async function(ctx) {
     ...unlockTasks
   ]);
 
-  // ===================== 数据解析与渲染 =====================
   let lIp = "—", lLoc = "—", lIsp = "—";
   try {
     if (lResRaw) {
@@ -189,10 +185,8 @@ export default async function(ctx) {
       nIp = nData.query || nIp;
       nCountryCode = nData.countryCode || "XX";
       nLoc = `${nData.country || ""} ${nData.city || ""}`.trim();
-      
       const asnMatch = nData.as ? nData.as.match(/(AS\d+)/) : null;
       asn = asnMatch ? asnMatch[1] : "未知ASN";
-      
       proxyProvider = fmtProxyISP(nData.isp || nData.org);
     }
   } catch (e) {}
@@ -205,12 +199,12 @@ export default async function(ctx) {
   else if (pureData.isResidential === false) ipTypeStr = "商业机房";
 
   const risk = pureData.fraudScore;
-  let riskTxt = "获取超时", riskCol = C_SUB;
+  let riskTxt = "获取超时", riskCol = C.dim;
   if (risk !== undefined) {
-    if (risk >= 80) { riskTxt = `极高危 (${risk})`; riskCol = C_RED; }
-    else if (risk >= 70) { riskTxt = `高危 (${risk})`; riskCol = C_ORANGE; }
-    else if (risk >= 35) { riskTxt = `中危 (${risk})`; riskCol = C_ORANGE; } 
-    else { riskTxt = `低危 (${risk})`; riskCol = C_GREEN; }
+    if (risk >= 80) { riskTxt = `极高危 (${risk})`; riskCol = C.red; }
+    else if (risk >= 70) { riskTxt = `高危 (${risk})`; riskCol = C.orange; }
+    else if (risk >= 35) { riskTxt = `中危 (${risk})`; riskCol = C.orange; } 
+    else { riskTxt = `低危 (${risk})`; riskCol = C.green; }
   }
 
   const unlockText = unlockResults.map(r => {
@@ -221,54 +215,75 @@ export default async function(ctx) {
     return `${r.name}:${getFlag(finalReg)}`;
   }).join("  ");
 
-  let delayColor = C_SUB;
+  let delayColor = C.dim;
   if (realTcpDelay > 0) {
-    if (realTcpDelay < 150) delayColor = C_GREEN;
-    else if (realTcpDelay <= 350) delayColor = C_ORANGE;
-    else delayColor = C_RED;
+    if (realTcpDelay < 150) delayColor = C.green;
+    else if (realTcpDelay <= 350) delayColor = C.orange;
+    else delayColor = C.red;
   }
 
   const headerTitle = lIsp !== "未知" ? `${lIsp} · ${netName}` : netName;
+  const dNow = new Date();
+  const timeStr = `${String(dNow.getHours()).padStart(2, '0')}:${String(dNow.getMinutes()).padStart(2, '0')}:${String(dNow.getSeconds()).padStart(2, '0')}`;
 
-  // ===================== UI 布局组件 (完美左对齐复刻) =====================
+  // ===================== 6. 完美 UI 布局重构 =====================
+
+  // 分割线组件
+  const divider = { type: 'stack', height: 1, backgroundColor: C.barBg, children: [{ type: 'spacer' }] };
+
+  // 顶部 Header
+  const header = {
+    type: 'stack', direction: 'row', alignItems: 'center', gap: 4, children: [
+      { type: 'image', src: `sf-symbol:${netIcon}`, color: C.text, width: 14, height: 14 },
+      { type: 'text', text: headerTitle, font: { size: 'headline', weight: 'bold' }, textColor: C.text, maxLines: 1 },
+      { type: 'spacer' },
+      { type: 'image', src: 'sf-symbol:clock', color: delayColor, width: 10, height: 10 },
+      { type: 'text', text: realTcpDelay > 0 ? `${realTcpDelay} ms` : '超时', font: { size: 11, weight: 'bold', family: 'Menlo' }, textColor: delayColor }
+    ]
+  };
+
+  // 左对齐行级渲染 (更紧凑高级的排版)
   const Row = (ic, labelCol, label, val, isLast = false) => ({
-    type: 'stack', direction: 'row', alignItems: 'center', gap: 6, padding: [2.5, 0],
+    type: 'stack', direction: 'row', alignItems: 'center', gap: 6,
     children: [
       { type: 'image', src: `sf-symbol:${ic}`, color: labelCol, width: 13, height: 13 },
       { type: 'text', text: label, font: { size: 12, weight: 'bold' }, textColor: labelCol },
-      { type: 'text', text: val, font: { size: 12 }, textColor: C_TEXT, maxLines: isLast ? 2 : 1 },
+      { type: 'text', text: val, font: { size: 11, family: 'Menlo' }, textColor: C.text, maxLines: isLast ? 2 : 1 },
       { type: 'spacer' } 
     ]
   });
 
+  // 底部对称式 Footer
+  const footer = {
+    type: 'stack', direction: 'row', alignItems: 'center', children: [
+      { type: 'image', src: 'sf-symbol:arrow.triangle.2.circlepath', color: C.dim, width: 9, height: 9 },
+      { type: 'text', text: ` 刷新于 ${timeStr}`, font: { size: 9, weight: 'medium' }, textColor: C.dim },
+      { type: 'spacer' },
+      { type: 'image', src: 'sf-symbol:network', color: C.dim, width: 9, height: 9 },
+      { type: 'text', text: ` ${ipTypeStr}`, font: { size: 9, family: 'Menlo' }, textColor: C.dim },
+    ]
+  };
+
   return {
     type: 'widget', 
-    padding: 14,
-    backgroundColor: BG_MAIN,
-    cornerRadius: 16,        // 新增：圆角边缘，匹配 iOS 规范
-    borderWidth: 1,          // 新增：边框宽度
-    borderColor: C_BORDER,   // 新增：自适应边框颜色
+    backgroundColor: C.bg,      // 采用参考代码的高级自适应背景
+    padding: [14, 16],          // 引入规范的内边距，挤出模块边界
+    gap: 8,                     // 确立整体栈间距
     refreshPolicy: { onNetworkChange: true, onEnter: true, timeout: 10 },
     children: [
-      { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
-          { type: 'image', src: `sf-symbol:${netIcon}`, color: C_TITLE, width: 16, height: 16 },
-          { type: 'text', text: headerTitle, font: { size: 14, weight: 'heavy' }, textColor: C_TITLE },
-          { type: 'spacer' },
-          { type: 'stack', direction: 'row', alignItems: 'center', gap: 3, children: [
-             { type: 'image', src: 'sf-symbol:clock', color: delayColor, width: 11, height: 11 },
-             { type: 'text', text: realTcpDelay > 0 ? `${realTcpDelay} ms` : '超时', font: { size: 12, weight: 'bold' }, textColor: delayColor }
-          ]}
-      ]},
-      { type: 'spacer', length: 10 },
-      
-      { type: 'stack', direction: 'column', gap: 1, children: [
-          Row("house.fill", C_GREEN, "内网", ` ${localIp} / ${gateway}`),
-          Row("paperplane.circle.fill", C_BLUE, "本地", ` ${lIp} / ${lLoc}`),
-          Row("globe", C_PURPLE, "落地", ` ${nIp} / ${getFlag(nCountryCode)} ${nLoc} / ${asn}`),
+      header,
+      divider, // 优雅的横向分割线
+      { 
+        type: 'stack', direction: 'column', gap: 6, children: [
+          Row("house.fill", C.green, "内网", ` ${localIp} / ${gateway}`),
+          Row("paperplane.circle.fill", C.blue, "本地", ` ${lIp} / ${lLoc}`),
+          Row("globe", C.purple, "落地", ` ${nIp} / ${getFlag(nCountryCode)} ${nLoc} / ${asn}`),
           Row("shield.lefthalf.filled", riskCol, "属性", ` ${proxyProvider} / ${ipTypeStr} / ${riskTxt}`),
-          Row("play.tv.fill", C_ORANGE, "解锁", ` ${unlockText}`, true) 
-      ]},
-      { type: 'spacer' }
+          Row("play.tv.fill", C.orange, "解锁", ` ${unlockText}`, true)
+        ]
+      },
+      { type: 'spacer' },
+      footer // 对称排版的刷新时间与 IP 属性简写
     ]
   };
 }
