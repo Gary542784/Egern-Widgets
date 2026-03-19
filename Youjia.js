@@ -1,19 +1,16 @@
 /**
  * ==========================================
- * 📌 代码名称: ⛽ 全国油价及调价预测
- * 🌟 修复说明: 统一采用 padding: [14, 16] 完美对齐其他组件边缘，完全弃用渐变，改用纯白/纯黑底色。
+ * 📌 代码名称: ⛽ 全国油价及调价预测 (统一 UI 版)
  * ==========================================
  */
-
 export default async function (ctx) {
   try {
     const regionParam = ctx.env.GAS_REGION || ctx.env.region || "sichuan/chengdu"; 
     const SHOW_TREND = (ctx.env.SHOW_TREND || "true").trim() !== "false";
 
-    // 🌟 核心修改：使用与网络看板一致的纯色底
+    // 🎨 统一 UI 规范颜色
     const BG_MAIN = { light: '#FFFFFF', dark: '#121212' }; 
     const BLOCK_BG = { light: '#F2F2F7', dark: '#1C1C1E' }; 
-    
     const TEXT_MAIN = { light: '#1C1C1E', dark: '#FFFFFF' };
     const TEXT_SUB = { light: '#48484A', dark: '#D1D1D6' }; 
     const TEXT_MUTED = { light: '#8E8E93', dark: '#8E8E93' }; 
@@ -97,7 +94,7 @@ export default async function (ctx) {
 
     return {
       type: "widget", 
-      padding: [14, 16], // 🌟 核心修复：强制左右留白 16px，与系统卡片完美对齐
+      padding: [14, 16], // 🌟 统一边距
       url: "hellobike://",
       backgroundColor: BG_MAIN, 
       children: [
@@ -107,7 +104,6 @@ export default async function (ctx) {
                 { type: "text", text: `${regionName || "成都"}油价`, font: { size: 15, weight: "heavy" }, textColor: TEXT_MAIN }
             ]},
             { type: "spacer" }, 
-            
             { type: "stack", direction: "row", alignItems: "center", children: [
                 { type: "text", text: "下轮调价: ", font: { size: 11, weight: "medium" }, textColor: infoColor },
                 { type: "text", text: nextAdjust.dateStr, font: { size: 11, weight: "bold" }, textColor: infoColor },
@@ -117,9 +113,7 @@ export default async function (ctx) {
                 ] : [])
             ]}
         ]},
-        
         { type: 'spacer', length: 12 },
-
         {
           type: "stack", direction: "row", gap: 6,
           children: priceItems.map(row => ({
@@ -131,9 +125,7 @@ export default async function (ctx) {
             ]
           }))
         },
-
         { type: 'spacer', length: 12 },
-
         {
           type: "stack", direction: "row", alignItems: "center",
           children: [
@@ -153,8 +145,7 @@ export default async function (ctx) {
     };
   } catch (err) {
     return {
-      type: 'widget',
-      padding: [14, 16],
+      type: 'widget', padding: [14, 16],
       backgroundColor: { light: '#FFFFFF', dark: '#121212' }, 
       children: [
         { type: 'text', text: '油价组件出现异常 ⚠️', font: { size: 14, weight: 'heavy' }, textColor: '#FF453A' },
