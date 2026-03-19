@@ -1,9 +1,9 @@
 /**
- * 🚀 全功能网络看板 Pro (完美布局版 · 结合 Server Monitor 结构)
- * 优化：移除破坏原生排版的手动边框，引入完美的卡片底色、横向分割线与对称式 Footer 排版
+ * 🚀 全功能网络看板 Pro (完美布局版 · 原生字体)
+ * 优化：引入完美的卡片底色、横向分割线与对称式 Footer 排版，保留原有系统字体
  */
 export default async function(ctx) {
-  // ===================== 1. 专属配色主题 (同步参考代码的高级感配色) =====================
+  // ===================== 1. 专属配色主题 =====================
   const C = {
     bg: { light: '#FFFFFF', dark: '#121212' },       // 高级深灰黑背景，恢复原生模块感
     barBg: { light: '#0000001A', dark: '#FFFFFF22' },// 分割线颜色
@@ -226,41 +226,41 @@ export default async function(ctx) {
   const dNow = new Date();
   const timeStr = `${String(dNow.getHours()).padStart(2, '0')}:${String(dNow.getMinutes()).padStart(2, '0')}:${String(dNow.getSeconds()).padStart(2, '0')}`;
 
-  // ===================== 6. 完美 UI 布局重构 =====================
+  // ===================== 6. 完美 UI 布局重构 (恢复原始系统字体) =====================
 
   // 分割线组件
   const divider = { type: 'stack', height: 1, backgroundColor: C.barBg, children: [{ type: 'spacer' }] };
 
-  // 顶部 Header
+  // 顶部 Header (还原 14 和 12 号字体)
   const header = {
     type: 'stack', direction: 'row', alignItems: 'center', gap: 4, children: [
-      { type: 'image', src: `sf-symbol:${netIcon}`, color: C.text, width: 14, height: 14 },
-      { type: 'text', text: headerTitle, font: { size: 'headline', weight: 'bold' }, textColor: C.text, maxLines: 1 },
+      { type: 'image', src: `sf-symbol:${netIcon}`, color: C.text, width: 16, height: 16 },
+      { type: 'text', text: headerTitle, font: { size: 14, weight: 'heavy' }, textColor: C.text, maxLines: 1 },
       { type: 'spacer' },
-      { type: 'image', src: 'sf-symbol:clock', color: delayColor, width: 10, height: 10 },
-      { type: 'text', text: realTcpDelay > 0 ? `${realTcpDelay} ms` : '超时', font: { size: 11, weight: 'bold', family: 'Menlo' }, textColor: delayColor }
+      { type: 'image', src: 'sf-symbol:clock', color: delayColor, width: 11, height: 11 },
+      { type: 'text', text: realTcpDelay > 0 ? `${realTcpDelay} ms` : '超时', font: { size: 12, weight: 'bold' }, textColor: delayColor }
     ]
   };
 
-  // 左对齐行级渲染 (更紧凑高级的排版)
+  // 左对齐行级渲染 (还原纯正 12 号字)
   const Row = (ic, labelCol, label, val, isLast = false) => ({
     type: 'stack', direction: 'row', alignItems: 'center', gap: 6,
     children: [
       { type: 'image', src: `sf-symbol:${ic}`, color: labelCol, width: 13, height: 13 },
       { type: 'text', text: label, font: { size: 12, weight: 'bold' }, textColor: labelCol },
-      { type: 'text', text: val, font: { size: 11, family: 'Menlo' }, textColor: C.text, maxLines: isLast ? 2 : 1 },
+      { type: 'text', text: val, font: { size: 12 }, textColor: C.text, maxLines: isLast ? 2 : 1 },
       { type: 'spacer' } 
     ]
   });
 
-  // 底部对称式 Footer
+  // 底部对称式 Footer (10 号系统默认字体)
   const footer = {
     type: 'stack', direction: 'row', alignItems: 'center', children: [
-      { type: 'image', src: 'sf-symbol:arrow.triangle.2.circlepath', color: C.dim, width: 9, height: 9 },
-      { type: 'text', text: ` 刷新于 ${timeStr}`, font: { size: 9, weight: 'medium' }, textColor: C.dim },
+      { type: 'image', src: 'sf-symbol:arrow.triangle.2.circlepath', color: C.dim, width: 10, height: 10 },
+      { type: 'text', text: ` 刷新于 ${timeStr}`, font: { size: 10, weight: 'medium' }, textColor: C.dim },
       { type: 'spacer' },
-      { type: 'image', src: 'sf-symbol:network', color: C.dim, width: 9, height: 9 },
-      { type: 'text', text: ` ${ipTypeStr}`, font: { size: 9, family: 'Menlo' }, textColor: C.dim },
+      { type: 'image', src: 'sf-symbol:network', color: C.dim, width: 10, height: 10 },
+      { type: 'text', text: ` ${ipTypeStr}`, font: { size: 10 }, textColor: C.dim },
     ]
   };
 
