@@ -1,18 +1,25 @@
 scriptings:
   - generic:
+      # 1. 局域网信息模块 (主要显示本地 Wi-Fi、路由器等内部网络状态)
       name: 网络信息-Lan
       script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Lan.js
   - generic:
+      # 2. 代理与网速测试模块 (通常用于展示节点连通性、延迟或代理状态)
       name: 网络信息-Lsdl
       script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Lsdl.js
   - generic:
+      # 3. 公网 IP 模块 (用于显示外部 IP 地址、运营商以及地理位置信息)
       name: 网络信息-Ip
       script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Ip.js
 
 widgets:
+  # 下方是面板展示部分的配置，顺序已按你的要求排列
+  # --- 局域网面板 ---
   - name: 网络信息-Lan
     script_name: 网络信息-Lan
+  # --- 代理/测速面板 ---
   - name: 网络信息-Lsdl
     script_name: 网络信息-Lsdl
+  # --- 公网 IP 面板 ---
   - name: 网络信息-Ip
     script_name: 网络信息-Ip
