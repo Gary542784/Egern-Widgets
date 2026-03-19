@@ -1,0 +1,18 @@
+scriptings:
+  - generic:
+      name: 网络信息-Lan
+      script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Lan.js
+  - generic:
+      name: 网络信息-Lsdl
+      script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Lsdl.js
+  - generic:
+      name: 网络信息-Ip
+      script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Ip.js
+
+widgets:
+  - name: 网络信息-Lan
+    script_name: 网络信息-Lan
+  - name: 网络信息-Lsdl
+    script_name: 网络信息-Lsdl
+  - name: 网络信息-Ip
+    script_name: 网络信息-Ip
