@@ -1,52 +1,44 @@
-// Server Monitor Widget Pro for Egern
-// 完美布局版 | 头部融合实时网速 | IP并列展示 | 底部信息对称排版
-
+/**
+ * ==========================================
+ * 📌 代码名称: 🖥️ Server Monitor Widget Pro (统一 UI 版)
+ * ==========================================
+ */
 export default async function (ctx) {
-  // ─── 1. 基础配置区域 (已修改为读取 Egern 环境变量) ────────────
-  const env = ctx.env || {}; // 获取 Egern 环境变量
+  const env = ctx.env || {}; 
   
   const SERVER_CONFIG = {
-    widgetName: env.WIDGET_NAME || 'My Node',        // 小组件名称
-    
-    // 👇 SSH 服务器登录信息 (优先读取环境变量)
-    host: env.SERVER_HOST || '',                     // 服务器 IP 或域名
-    port: Number(env.SERVER_PORT) || 22,             // SSH 端口，默认 22
-    username: env.SERVER_USER || 'root',             // SSH 用户名，默认 root
-    password: env.SERVER_PASSWORD || '',             // SSH 密码
-    privateKey: env.SERVER_KEY || '',                // SSH 私钥 (优先于密码)
-    
-    // 👇 BWH 搬瓦工 API 配置
-    bwhVeid: env.BWH_VEID || '',                     // 搬瓦工 VEID
-    bwhApiKey: env.BWH_API_KEY || '',                // 搬瓦工 API KEY
-
-    // 👇 非搬瓦工机器的降级配置 (本地网卡双向统计)
-    trafficLimitGB: Number(env.TRAFFIC_LIMIT) || 2000, // 每月流量上限 (GB)
-    resetDay: Number(env.RESET_DAY) || 1             // 每月流量重置日
+    widgetName: env.WIDGET_NAME || 'My Node',        
+    host: env.SERVER_HOST || '',                     
+    port: Number(env.SERVER_PORT) || 22,             
+    username: env.SERVER_USER || 'root',             
+    password: env.SERVER_PASSWORD || '',             
+    privateKey: env.SERVER_KEY || '',                
+    bwhVeid: env.BWH_VEID || '',                     
+    bwhApiKey: env.BWH_API_KEY || '',                
+    trafficLimitGB: Number(env.TRAFFIC_LIMIT) || 2000, 
+    resetDay: Number(env.RESET_DAY) || 1             
   };
 
-  // ─── 2. 多彩专属配色主题 ────────────
+  // 🎨 统一 UI 规范颜色
   const C = {
-    bg: { light: '#FFFFFF', dark: '#121212' },       // 高级深灰黑背景
-    barBg: { light: '#0000001A', dark: '#FFFFFF22' },// 进度条底槽色 (带透明度)
-    text: { light: '#111111', dark: '#FFFFFF' },     // 主文字颜色 (黑色/白色)
-    dim: { light: '#8E8E93', dark: '#8E8E93' },      // 暗淡文字
+    bg: { light: '#FFFFFF', dark: '#121212' },       // 🌟 统一黑白背景色
+    barBg: { light: '#0000001A', dark: '#FFFFFF22' },
+    text: { light: '#1C1C1E', dark: '#FFFFFF' },     // 🌟 统一主文字色
+    dim: { light: '#8E8E93', dark: '#8E8E93' },      // 🌟 统一弱化文本色
     
-    // 独立硬件颜色设定
-    cpu: { light: '#007AFF', dark: '#0A84FF' },      // 科技蓝
-    mem: { light: '#AF52DE', dark: '#BF5AF2' },      // 梦幻紫
-    disk: { light: '#FF9500', dark: '#FF9F0A' },     // 警告橙
-    netRx: { light: '#34C759', dark: '#30D158' },    // 下载绿
-    netTx: { light: '#5856D6', dark: '#5E5CE6' },    // 上传紫
+    cpu: { light: '#007AFF', dark: '#0A84FF' },      
+    mem: { light: '#AF52DE', dark: '#BF5AF2' },      
+    disk: { light: '#FF9500', dark: '#FF9F0A' },     
+    netRx: { light: '#34C759', dark: '#30D158' },    
+    netTx: { light: '#5856D6', dark: '#5E5CE6' },    
   };
 
-  // 流量专属动态预警色
   const getTrafficColor = (pct) => {
-    if (pct >= 85) return { light: '#FF3B30', dark: '#FF453A' }; // 危险红
-    if (pct >= 60) return { light: '#FF9500', dark: '#FF9F0A' }; // 预警橙
-    return { light: '#34C759', dark: '#30D158' };                // 安全绿
+    if (pct >= 85) return { light: '#FF3B30', dark: '#FF453A' }; 
+    if (pct >= 60) return { light: '#FF9500', dark: '#FF9F0A' }; 
+    return { light: '#34C759', dark: '#30D158' };                
   };
 
-  // ─── Helpers ────────────────────────────────
   const fmtBytes = (b) => {
     if (b >= 1024 ** 4) return (b / 1024 ** 4).toFixed(2) + 'T';
     if (b >= 1024 ** 3) return (b / 1024 ** 3).toFixed(2) + 'G';
@@ -63,12 +55,10 @@ export default async function (ctx) {
     return `${m + 1}月${resetDay}日 00:00`;
   };
 
-  // ─── Fetch Data ─────────────────────────────
   let d;
   try {
     const { host, port, username, password, privateKey, widgetName, bwhVeid, bwhApiKey, trafficLimitGB, resetDay } = SERVER_CONFIG;
     
-    // 检查是否填写了必要的环境变量
     if (!host) {
       throw new Error('未配置 SERVER_HOST 环境变量');
     }
@@ -190,7 +180,6 @@ export default async function (ctx) {
     d = { error: String(e.message || e) };
   }
 
-  // ─── UI 渲染组件库 ────────────────────
   const bar = (pct, color, h = 5) => ({
     type: 'stack', direction: 'row', height: h, borderRadius: h / 2,
     backgroundColor: C.barBg,
@@ -227,7 +216,7 @@ export default async function (ctx) {
 
   if (d.error) {
     return {
-      type: 'widget', padding: 16, gap: 8, backgroundColor: C.bg,
+      type: 'widget', padding: [14, 16], gap: 8, backgroundColor: C.bg,
       children: [
         { type: 'text', text: '⚠️ Connection Failed', font: { size: 'headline', weight: 'bold' }, textColor: getTrafficColor(100) },
         { type: 'text', text: d.error, font: { size: 'caption1' }, textColor: C.dim, maxLines: 3 },
@@ -235,10 +224,9 @@ export default async function (ctx) {
     };
   }
 
-  // ─── Widgets Layout ────────────
   if (ctx.widgetFamily === 'systemSmall') {
     return {
-      type: 'widget', backgroundColor: C.bg, padding: 12, gap: 5,
+      type: 'widget', backgroundColor: C.bg, padding: [12, 16], gap: 5, // 🌟 统一边距
       children: [
         { type: 'stack', direction: 'column', gap: 1, children: [
           { type: 'stack', direction: 'row', alignItems: 'center', gap: 4, children: [
@@ -269,7 +257,7 @@ export default async function (ctx) {
 
   if (ctx.widgetFamily === 'systemMedium') {
     return {
-      type: 'widget', backgroundColor: C.bg, padding: [12, 16],
+      type: 'widget', backgroundColor: C.bg, padding: [12, 16], // 🌟 统一边距
       children: [
         header(),
         { type: 'spacer' },
@@ -325,7 +313,7 @@ export default async function (ctx) {
   }
 
   return {
-    type: 'widget', backgroundColor: C.bg, padding: [14, 16], gap: 8,
+    type: 'widget', backgroundColor: C.bg, padding: [14, 16], gap: 8, // 🌟 统一边距
     children: [
       header(),
       divider,
