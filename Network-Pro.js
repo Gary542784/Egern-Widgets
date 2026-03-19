@@ -1,7 +1,7 @@
 /**
  * ==========================================
- * 📌 代码名称: 🌐 全功能网络看板 Pro (统一 UI 版)
- * 🛠️ 布局优化版：自适应充满整个小组件
+ * 📌 代码名称: 🌐 全功能网络看板 Pro (精简最终版)
+ * 🛠️ 特性：BWH 两端对齐布局 + 百度/落地双延迟 (已移除打码)
  * ==========================================
  */
 export default async function(ctx) {
@@ -20,10 +20,10 @@ export default async function(ctx) {
   const fmtLocalISP = (isp) => {
     if (!isp) return "未知";
     const s = String(isp).toLowerCase();
-    if (/移动|mobile|cmcc/i.test(s)) return "中国移动";
-    if (/电信|telecom|chinanet/i.test(s)) return "中国电信";
-    if (/联通|unicom/i.test(s)) return "中国联通";
-    if (/广电|broadcast|cbn/i.test(s)) return "中国广电";
+    if (/移动|mobile|cmcc/i.test(s)) return "移动";
+    if (/电信|telecom|chinanet/i.test(s)) return "电信";
+    if (/联通|unicom/i.test(s)) return "联通";
+    if (/广电|broadcast|cbn/i.test(s)) return "广电";
     return isp; 
   };
 
@@ -77,6 +77,18 @@ export default async function(ctx) {
     }
     return "";
   };
+
+  // 🚀 延迟测试模块：百度本地测试 vs 极速 204 落地测试
+  let baiduDelay = 0;
+  let proxyDelay = 0;
+  
+  const startBaidu = Date.now();
+  const baiduTask = ctx.http.get("http://www.baidu.com", { timeout: 2000 })
+    .then(() => { baiduDelay = Date.now() - startBaidu; }).catch(() => {});
+    
+  const startProxy = Date.now();
+  const proxyTask = ctx.http.get("http://cp.cloudflare.com/generate_204", { timeout: 2000 })
+    .then(() => { proxyDelay = Date.now() - startProxy; }).catch(() => {});
 
   async function checkNetflix(ctx) {
     try {
@@ -145,9 +157,6 @@ export default async function(ctx) {
     } catch { return "❌"; }
   }
 
-  const globalStart = Date.now();
-  let realTcpDelay = 0;
-
   const unlockTasks = [
     checkChatGPT(ctx).then(region => ({ name: "GPT", region })),
     checkNetflix(ctx).then(region => ({ name: "NF", region })),
@@ -155,14 +164,20 @@ export default async function(ctx) {
     checkGemini(ctx).then(region => ({ name: "GMNI", region }))
   ];
 
-  const [pingTask, lResRaw, nResRaw, pureResRaw, ...unlockResults] = await Promise.all([
-    ctx.http.get("http://connectivitycheck.gstatic.com/generate_204", { timeout: 2000 })
-      .then(() => { realTcpDelay = Date.now() - globalStart; }).catch(() => {}),
+  const networkInfoTasks = Promise.all([
     ctx.http.get('https://myip.ipip.net/json', { headers: commonHeaders, timeout: 4000 }).catch(() => null),
     ctx.http.get('http://ip-api.com/json/?lang=zh-CN', { timeout: 4000 }).catch(() => null),
-    ctx.http.get('https://my.ippure.com/v1/info', { timeout: 4000 }).catch(() => null),
-    ...unlockTasks
+    ctx.http.get('https://my.ippure.com/v1/info', { timeout: 4000 }).catch(() => null)
   ]);
+
+  const [netResults, unlockResults] = await Promise.all([
+    networkInfoTasks,
+    Promise.all(unlockTasks),
+    baiduTask, 
+    proxyTask
+  ]);
+
+  const [lResRaw, nResRaw, pureResRaw] = netResults;
 
   let lIp = "—", lLoc = "—", lIsp = "—";
   try {
@@ -210,60 +225,66 @@ export default async function(ctx) {
     if (r.region === "APP") return `${r.name}:📱`; 
     const finalReg = (r.region && r.region !== "OK" && r.region !== "XX") ? r.region : nCountryCode;
     return `${r.name}:${getFlag(finalReg)}`;
-  }).join("  ");
+  }).join(" ");
 
-  let delayColor = C_SUB;
-  if (realTcpDelay > 0) {
-    if (realTcpDelay < 150) delayColor = C_GREEN;
-    else if (realTcpDelay <= 350) delayColor = C_ORANGE;
-    else delayColor = C_RED;
-  }
+  const getDelayCol = (ms) => {
+    if (ms <= 0) return C_SUB;
+    if (ms < 150) return C_GREEN;
+    if (ms <= 350) return C_ORANGE;
+    return C_RED;
+  };
+  const bdCol = getDelayCol(baiduDelay);
+  const pxCol = getDelayCol(proxyDelay);
 
   const headerTitle = lIsp !== "未知" ? `${lIsp} · ${netName}` : netName;
   const dNow = new Date();
   const timeStr = `${String(dNow.getHours()).padStart(2, '0')}:${String(dNow.getMinutes()).padStart(2, '0')}:${String(dNow.getSeconds()).padStart(2, '0')}`;
 
-  // 🛠️ 优化 1：去掉单行固定的上下 Padding，交由外层 Stack 的 gap 来控制间距，使多行文本对齐更规整
-  const Row = (ic, labelCol, label, val, isLast = false) => ({
-    type: 'stack', direction: 'row', alignItems: 'center', gap: 6,
+  const Row = (ic, labelCol, label, val) => ({
+    type: 'stack', direction: 'row', alignItems: 'center', 
     children: [
-      { type: 'image', src: `sf-symbol:${ic}`, color: labelCol, width: 13, height: 13 },
-      { type: 'text', text: label, font: { size: 12, weight: 'bold' }, textColor: labelCol },
-      { type: 'text', text: val, font: { size: 12 }, textColor: C_TEXT, maxLines: isLast ? 2 : 1 },
-      { type: 'spacer' } 
+      { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
+        { type: 'image', src: `sf-symbol:${ic}`, color: labelCol, width: 13, height: 13 },
+        { type: 'text', text: label, font: { size: 12, weight: 'bold' }, textColor: C_TITLE }
+      ]},
+      { type: 'spacer' },
+      { type: 'text', text: val.trim(), font: { size: 11, weight: 'medium' }, textColor: C_SUB, align: 'right', maxLines: 1 }
     ]
   });
 
   return {
     type: 'widget', 
-    padding: [16, 16], // 🛠️ 优化 2：统一四周边距，让内容框架稍微向内收敛一点，避免贴边
+    padding: [16, 16], 
     backgroundColor: BG_MAIN, 
     refreshPolicy: { onNetworkChange: true, onEnter: true, timeout: 10 },
     children: [
-      // --- 头部 ---
-      { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
-          { type: 'image', src: `sf-symbol:${netIcon}`, color: C_TITLE, width: 16, height: 16 },
-          { type: 'text', text: headerTitle, font: { size: 14, weight: 'heavy' }, textColor: C_TITLE },
+      // --- 头部 --- 
+      { type: 'stack', direction: 'row', alignItems: 'center', children: [
+          { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
+            { type: 'image', src: `sf-symbol:${netIcon}`, color: C_TITLE, width: 15, height: 15 },
+            { type: 'text', text: headerTitle, font: { size: 14, weight: 'heavy' }, textColor: C_TITLE }
+          ]},
           { type: 'spacer' },
-          { type: 'stack', direction: 'row', alignItems: 'center', gap: 3, children: [
-             { type: 'image', src: 'sf-symbol:clock', color: delayColor, width: 11, height: 11 },
-             { type: 'text', text: realTcpDelay > 0 ? `${realTcpDelay} ms` : '超时', font: { size: 12, weight: 'bold' }, textColor: delayColor }
+          { type: 'stack', direction: 'row', alignItems: 'center', gap: 4, children: [
+             { type: 'text', text: '百度', font: { size: 9, weight: 'bold' }, textColor: C_SUB },
+             { type: 'text', text: baiduDelay > 0 ? `${baiduDelay}ms` : '超时', font: { size: 11, weight: 'bold' }, textColor: bdCol },
+             { type: 'text', text: '|', font: { size: 10 }, textColor: C_SUB },
+             { type: 'text', text: '落地', font: { size: 9, weight: 'bold' }, textColor: C_SUB },
+             { type: 'text', text: proxyDelay > 0 ? `${proxyDelay}ms` : '超时', font: { size: 11, weight: 'bold' }, textColor: pxCol }
           ]}
       ]},
       
-      // 🛠️ 优化 3：用弹性 Spacer 替换原本固定的 `length: 10`
       { type: 'spacer' }, 
       
-      // --- 主体数据内容 ---
-      { type: 'stack', direction: 'column', gap: 6, children: [ // 🛠️ 优化 4：行间距 gap 由 1 增大到 6，让数据行展开填充
-          Row("house.fill", C_GREEN, "内网", ` ${localIp} / ${gateway}`),
-          Row("paperplane.circle.fill", C_BLUE, "本地", ` ${lIp} / ${lLoc}`),
-          Row("globe", C_PURPLE, "落地", ` ${nIp} / ${getFlag(nCountryCode)} ${nLoc} / ${asn}`),
-          Row("shield.lefthalf.filled", riskCol, "属性", ` ${proxyProvider} / ${ipTypeStr} / ${riskTxt}`),
-          Row("play.tv.fill", C_ORANGE, "解锁", ` ${unlockText}`, true) 
+      // --- 主体数据内容 --- 
+      { type: 'stack', direction: 'column', gap: 8, children: [ 
+          Row("house.fill", C_GREEN, "内网", `${localIp} / ${gateway}`),
+          Row("paperplane.fill", C_BLUE, "本地", `${lIp} / ${lLoc}`),
+          Row("globe", C_PURPLE, "落地", `${nIp} / ${getFlag(nCountryCode)} ${nLoc}`),
+          Row("shield.lefthalf.filled", riskCol, "属性", `${proxyProvider} / ${ipTypeStr} / ${riskTxt}`),
+          Row("play.tv.fill", C_ORANGE, "解锁", `${unlockText}`) 
       ]},
       
-      // 🛠️ 优化 5：底部再加一个弹性 Spacer。上下两个 Spacer 会把主体内容完美“顶”到垂直居中的位置
       { type: 'spacer' },
       
       // --- 底部时间 ---
