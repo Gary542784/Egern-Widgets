@@ -1,20 +1,17 @@
 /**
  * ==========================================
- * 📌 代码名称: ⛽ 全国油价及调价预测（默认成都）
- * ✨ 特色功能: 实时获取各标号油价及涨跌趋势；精简油价单位为 ¥/L；智能预告并精准倒数下轮调价窗口；支持模块化配置地区；支持点击跳转哈啰App；统一上下角标字号，像素级完美对齐。
- * 🌟 修复说明: 完全引用完美布局版网络看板的深色背景 (#121212)，移除糊成一团的渐变背景，内部色块使用 #1C1C1E 增强边界清晰度。
+ * 📌 代码名称: ⛽ 全国油价及调价预测
+ * 🌟 修复说明: 统一采用 padding: [14, 16] 完美对齐其他组件边缘，完全弃用渐变，改用纯白/纯黑底色。
  * ==========================================
  */
 
 export default async function (ctx) {
   try {
-    // 👇 优先读取 Egern 模块中的 GAS_REGION，兜底为成都
     const regionParam = ctx.env.GAS_REGION || ctx.env.region || "sichuan/chengdu"; 
     const SHOW_TREND = (ctx.env.SHOW_TREND || "true").trim() !== "false";
 
-    // 🌟 完全引用网络看板的纯净底色，弃用渐变
+    // 🌟 核心修改：使用与网络看板一致的纯色底
     const BG_MAIN = { light: '#FFFFFF', dark: '#121212' }; 
-    // 🌟 内部色块稍微提亮一点点，形成清晰的模块边界
     const BLOCK_BG = { light: '#F2F2F7', dark: '#1C1C1E' }; 
     
     const TEXT_MAIN = { light: '#1C1C1E', dark: '#FFFFFF' };
@@ -100,9 +97,9 @@ export default async function (ctx) {
 
     return {
       type: "widget", 
-      padding: 12,
+      padding: [14, 16], // 🌟 核心修复：强制左右留白 16px，与系统卡片完美对齐
       url: "hellobike://",
-      backgroundColor: BG_MAIN, // 🌟 核心修改：使用纯色背景
+      backgroundColor: BG_MAIN, 
       children: [
         { type: "stack", direction: "row", alignItems: "center", children: [
             { type: "stack", direction: "row", alignItems: "center", gap: 6, children: [
@@ -111,7 +108,6 @@ export default async function (ctx) {
             ]},
             { type: "spacer" }, 
             
-            // 💎 右上角：统一字号为 11
             { type: "stack", direction: "row", alignItems: "center", children: [
                 { type: "text", text: "下轮调价: ", font: { size: 11, weight: "medium" }, textColor: infoColor },
                 { type: "text", text: nextAdjust.dateStr, font: { size: 11, weight: "bold" }, textColor: infoColor },
@@ -142,13 +138,11 @@ export default async function (ctx) {
           type: "stack", direction: "row", alignItems: "center",
           children: [
             { type: "stack", direction: "row", alignItems: "center", gap: 4, children: [
-                // 💎 左下角：统一图标 11，字号 11
                 { type: "image", src: "sf-symbol:arrow.triangle.2.circlepath", width: 11, height: 11, color: TEXT_MUTED },
                 { type: "text", text: updateTimeStr, font: { size: 11, weight: 'bold' }, textColor: TEXT_MUTED }
             ]},
             { type: "spacer" },
             { type: "stack", direction: "row", alignItems: "center", gap: 2, children: [
-                // 💎 右下角：统一字号为 11
                 { type: "text", text: "本轮调价: ", font: { size: 11, weight: 'medium' }, textColor: TEXT_MUTED },
                 { type: "text", text: trendInfo, font: { size: 11, weight: "bold" }, textColor: trendColor, lineLimit: 1, minScale: 0.7 }
             ]}
@@ -160,8 +154,8 @@ export default async function (ctx) {
   } catch (err) {
     return {
       type: 'widget',
-      padding: 12,
-      backgroundColor: { light: '#FFFFFF', dark: '#121212' }, // 🌟 错误界面同步修改
+      padding: [14, 16],
+      backgroundColor: { light: '#FFFFFF', dark: '#121212' }, 
       children: [
         { type: 'text', text: '油价组件出现异常 ⚠️', font: { size: 14, weight: 'heavy' }, textColor: '#FF453A' },
         { type: 'spacer', length: 4 },
