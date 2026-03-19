@@ -1,6 +1,6 @@
 /**
  * ==========================================
- * 📌 代码名称: 🪙 Crypto Price Widget (汇率 + 10币防溢出版)
+ * 📌 代码名称: 🪙 Crypto Price Widget (10币 高密度防溢出版)
  * ==========================================
  */
 export default async function(ctx) {
@@ -15,9 +15,8 @@ export default async function(ctx) {
     red:     { light: '#FF3B30', dark: '#FF453A' }  
   };
 
-  // 🌟 加入了 tether，并请求 cny 汇率
   const COINS = "bitcoin,ethereum,solana,binancecoin,ripple,dogecoin,cardano,avalanche-2,chainlink,polkadot";
-  const API_URL = `https://api.coingecko.com/api/v3/simple/price?ids=${COINS},tether&vs_currencies=usd,cny&include_24hr_change=true`;
+  const API_URL = `https://api.coingecko.com/api/v3/simple/price?ids=${COINS}&vs_currencies=usd&include_24hr_change=true`;
 
   const COIN_MAP = {
     bitcoin:      { symbol: "BTC",  name: "Bitcoin",   icon: "bitcoinsign.circle.fill",  color: "#F7931A" },
@@ -98,23 +97,14 @@ export default async function(ctx) {
 
   const separator = () => hstack([spacer()], { height: 0.5, backgroundColor: THEME.line });
 
-  // 🌟 核心修改：头部栏接收 usdtRate 并在时间左侧显示
-  const headerBar = (title, titleSize, iconSize, showTime, usdtRate) => {
-    const fontSize = Math.max(9, titleSize - 4);
+  const headerBar = (title, titleSize, iconSize, showTime) => {
     const children = [
       icon("chart.line.uptrend.xyaxis.circle.fill", iconSize, THEME.accent),
       txt(title, titleSize, "heavy", THEME.accent),
       spacer(),
     ];
-    
-    // 如果成功获取汇率，则显示
-    if (usdtRate) {
-      children.push(txt(`USDT ¥${usdtRate}`, fontSize, "bold", THEME.textSec));
-      children.push(spacer(6));
-    }
-    
     if (showTime) {
-      children.push(dateTxt(new Date().toISOString(), "time", fontSize, "medium", THEME.textSec));
+      children.push(dateTxt(new Date().toISOString(), "time", Math.max(9, titleSize - 4), "medium", THEME.textSec));
     }
     return hstack(children, { gap: 4 });
   };
@@ -128,61 +118,13 @@ export default async function(ctx) {
 
   const sectionLabel = (label) => txt(label, 10, "semibold", THEME.textSec);
 
-  const CARD_PRESETS = {
-    small:  { layout: "column", iconSize: 14, priceSize: 15, symbolSize: 12, changeSize: 11, changeIconSize: 8,  borderRadius: 10, padding: [8, 10, 8, 10],   borderWidth: 0.5, nameSize: 0,  innerGap: 3 },
-    medium: { layout: "row",    iconSize: 20, priceSize: 18, symbolSize: 16, changeSize: 13, changeIconSize: 10, borderRadius: 14, padding: [10, 12, 10, 12], borderWidth: 1,   nameSize: 10, innerGap: 6 },
-    large:  { layout: "row",    iconSize: 26, priceSize: 24, symbolSize: 18, changeSize: 15, changeIconSize: 12, borderRadius: 14, padding: [14, 16, 14, 16], borderWidth: 1,   nameSize: 11, innerGap: 8 },
-  };
-
-  const coinCard = (id, data, variant) => {
-    const info = COIN_MAP[id];
-    const change = data.usd_24h_change;
-    const p = CARD_PRESETS[variant];
-
-    const changeRow = hstack([
-      icon(changeIcon(change), p.changeIconSize, changeColor(change)),
-      txt(formatChange(change), p.changeSize, "semibold", changeColor(change)),
-    ], { gap: 2 });
-
-    const cardOpts = {
-      gap: p.innerGap,
-      padding: p.padding,
-      backgroundGradient: cardGradient(info.color),
-      borderRadius: p.borderRadius,
-      borderWidth: p.borderWidth,
-      borderColor: info.color + "44",
-    };
-
-    if (p.layout === "column") {
-      return vstack([
-        hstack([coinIcon(info, p.iconSize), txt(info.symbol, p.symbolSize, "bold", THEME.text)], { gap: 4 }),
-        txt(formatPrice(data.usd), p.priceSize, "semibold", THEME.text, { minScale: 0.6, maxLines: 1 }),
-        changeRow,
-      ], cardOpts);
-    }
-
-    const nameItems = [txt(info.symbol, p.symbolSize, "heavy", THEME.text)];
-    if (p.nameSize) nameItems.push(txt(info.name, p.nameSize, "medium", THEME.textSec));
-
-    return vstack([
-      hstack([
-        coinIcon(info, p.iconSize),
-        vstack(nameItems, { gap: 0 }),
-        spacer(),
-        vstack([
-          txt(formatPrice(data.usd), p.priceSize, "bold", THEME.text),
-          changeRow,
-        ], { alignItems: "end", gap: 1 }),
-      ], { gap: p.innerGap }),
-    ], cardOpts);
-  };
-
-  // 🌟 布局高密度压缩：为了容纳10个币，紧凑模式缩小了字号和间距
+  // 🌟 高密度单行渲染器
   const coinRow = (id, data, compact) => {
     const info = COIN_MAP[id];
     const change = data.usd_24h_change;
-    const sz = compact ? 10 : 13;       // 压缩字号
-    const iconSz = compact ? 10 : 14;   // 压缩图标
+    // 💡 紧凑模式下字号缩小到 10，图标缩小到 10，防止纵向溢出
+    const sz = compact ? 10 : 13;
+    const iconSz = compact ? 10 : 14;
 
     return hstack([
       coinIcon(info, iconSz),
@@ -190,110 +132,61 @@ export default async function(ctx) {
       spacer(),
       txt(formatPrice(data.usd), sz, "semibold", THEME.text, { maxLines: 1, minScale: 0.7 }),
       txt(formatChange(change), sz, "medium", changeColor(change)),
-    ], { gap: compact ? 3 : 6 });       // 压缩内部间距
+    ], { gap: compact ? 3 : 6 }); // 💡 行内间距减小
   };
 
-  const rowGroup = (items, gap) => vstack(items, { gap: gap || 6 });
   const filterAvailable = (ids, prices) => ids.filter(id => prices[id]);
-
-  const systemWidget = (padding, children, extraOpts = {}) => ({
-    type: "widget",
-    gap: 0,
-    padding: padding,
-    backgroundColor: THEME.bg, 
-    children: children,
-    ...extraOpts
-  });
-
-  // 修改了系统框架，大幅减小了上下预留的空隙
-  const systemBody = (title, titleSize, iconSize, bodyChildren, usdtRate) => [
-    headerBar(title, titleSize, iconSize, true, usdtRate),
-    spacer(4),
-    separator(),
-    spacer(4),
-    ...bodyChildren,
-    spacer(4),
-    footerBar(),
-  ];
-
-  const buildSystemSmall = (prices, usdtRate) => {
-    const rows = filterAvailable(["bitcoin", "ethereum", "solana", "binancecoin"], prices)
-      .map(id => coinRow(id, prices[id], true));
-    return systemWidget([12, 16], systemBody("Crypto", 13, 14, [rowGroup(rows, 6)], usdtRate));
-  };
-
-  const buildSystemMedium = (prices, usdtRate) => {
-    const ids = filterAvailable(ALL_IDS, prices);
-    const halfIndex = Math.ceil(ids.length / 2);
-    const left = ids.slice(0, halfIndex).map(id => coinRow(id, prices[id], true));
-    const right = ids.slice(halfIndex).map(id => coinRow(id, prices[id], true));
-
-    // 🌟 卡片主体：双列 10币，间距被强制设为 3，防止高度溢出
-    return systemWidget([12, 16], systemBody("Crypto Tracker", 13, 14, [
-      hstack([
-        rowGroup(left, 3), // 极小行距
-        vstack([], { width: 0.5, height: 85, backgroundColor: THEME.line }),
-        rowGroup(right, 3), // 极小行距
-      ], { alignItems: "center", gap: 8 }),
-    ], usdtRate));
-  };
-
-  const buildSystemLarge = (prices, usdtRate) => {
-    const featured = filterAvailable(["bitcoin", "ethereum"], prices)
-      .map(id => coinCard(id, prices[id], "medium"));
-    const restIds = ALL_IDS.filter(id => id !== "bitcoin" && id !== "ethereum");
-    const rows = filterAvailable(restIds, prices)
-      .map(id => coinRow(id, prices[id], true));
-
-    return systemWidget([14, 16], systemBody("Crypto Tracker", 16, 20, [
-      rowGroup(featured, 8),
-      spacer(),
-      sectionLabel("MARKET"),
-      spacer(4),
-      rowGroup(rows, 6),
-    ], usdtRate));
-  };
-
-  const buildSystemExtraLarge = (prices, usdtRate) => {
-    const featured = filterAvailable(["bitcoin", "ethereum", "solana"], prices)
-      .map(id => coinCard(id, prices[id], "large"));
-    const restIds = ALL_IDS.filter(id => !["bitcoin", "ethereum", "solana"].includes(id));
-    const restCards = filterAvailable(restIds, prices)
-      .map(id => coinCard(id, prices[id], "small"));
-
-    return systemWidget([14, 16], systemBody("Crypto Tracker", 20, 24, [
-      hstack(featured, { gap: 10 }),
-      spacer(),
-      sectionLabel("MARKET"),
-      spacer(4),
-      hstack(restCards, { gap: 8 }),
-    ], usdtRate));
-  };
-
-  const BUILDERS = {
-    systemSmall: buildSystemSmall,
-    systemMedium: buildSystemMedium,
-    systemLarge: buildSystemLarge,
-    systemExtraLarge: buildSystemExtraLarge,
-  };
 
   const family = ctx.widgetFamily;
   try {
     const resp = await ctx.http.get(API_URL);
     const prices = await resp.json();
     
-    // 🌟 解析提取 USDT 兑 CNY 的汇率
-    const usdtRate = prices.tether?.cny ? prices.tether.cny.toFixed(2) : null;
+    let widget;
     
-    const build = BUILDERS[family] || buildSystemMedium;
-    const widget = build(prices, usdtRate);
-    
+    // ==========================================
+    // 中尺寸组件 (双列 10币 特供高度压缩布局)
+    // ==========================================
+    if (family === "systemMedium" || !family) {
+      const ids = filterAvailable(ALL_IDS, prices);
+      const halfIndex = Math.ceil(ids.length / 2);
+      const left = ids.slice(0, halfIndex).map(id => coinRow(id, prices[id], true));
+      const right = ids.slice(halfIndex).map(id => coinRow(id, prices[id], true));
+
+      widget = {
+        type: "widget",
+        gap: 0,
+        padding: [14, 16], // 保持系统卡片边缘对齐规范
+        backgroundColor: THEME.bg,
+        children: [
+          headerBar("Crypto Tracker", 13, 14, true),
+          spacer(4), // 💡 取消弹簧占位，写死极小间距
+          separator(),
+          spacer(4),
+          hstack([
+            vstack(left, { gap: 3, flex: 1 }), // 💡 5行的行距压缩至极小的 3px
+            vstack([], { width: 0.5, height: 85, backgroundColor: THEME.line }), // 分割线高度限定
+            vstack(right, { gap: 3, flex: 1 }),
+          ], { alignItems: "center", gap: 8 }),
+          spacer(4),
+          footerBar(),
+        ]
+      };
+    } 
+    // 其他尺寸降级处理 (防崩溃)
+    else {
+      widget = {
+        type: "widget", padding: [14, 16], backgroundColor: THEME.bg,
+        children: [{ type: "text", text: "Please use Medium widget for 10 coins.", font: { size: 12 }, textColor: THEME.text }]
+      };
+    }
+
     widget.refreshAfter = new Date(Date.now() + 60 * 1000).toISOString();
     return widget;
   } catch (e) {
     return {
       type: "widget", padding: [14, 16], backgroundColor: THEME.bg,
-      children: [{ type: "text", text: "Failed to load prices", font: { size: 14, weight: "medium" }, textColor: THEME.red }]
+      children: [{ type: "text", text: "网络加载失败或 API 限制", font: { size: 12, weight: "medium" }, textColor: THEME.red }]
     };
   }
 }
