@@ -1,21 +1,22 @@
 /**
  * ==========================================
- * 📌 代码名称: 🪙 Crypto Price Widget (统一 UI 版)
+ * 📌 代码名称: 🪙 Crypto Price Widget (10币 饱满版)
  * ==========================================
  */
 export default async function(ctx) {
   // 🎨 统一 UI 规范颜色
   const THEME = {
-    bg:      { light: '#FFFFFF', dark: '#121212' }, // 🌟 统一黑白背景色
-    text:    { light: '#1C1C1E', dark: '#FFFFFF' }, // 🌟 统一主文字色
-    textSec: { light: '#8E8E93', dark: '#8E8E93' }, // 🌟 统一弱化文本色
-    line:    { light: '#E5E5EA', dark: '#38383A' }, // 🌟 统一分割线颜色
+    bg:      { light: '#FFFFFF', dark: '#121212' }, 
+    text:    { light: '#1C1C1E', dark: '#FFFFFF' }, 
+    textSec: { light: '#8E8E93', dark: '#8E8E93' }, 
+    line:    { light: '#E5E5EA', dark: '#38383A' }, 
     accent:  { light: '#1C1C1E', dark: '#FFFFFF' }, 
     green:   { light: '#34C759', dark: '#30D158' }, 
     red:     { light: '#FF3B30', dark: '#FF453A' }  
   };
 
-  const COINS = "bitcoin,ethereum,solana,binancecoin,ripple,dogecoin,cardano,avalanche-2";
+  // 🌟 新增 chainlink 和 polkadot，总计 10 个币种
+  const COINS = "bitcoin,ethereum,solana,binancecoin,ripple,dogecoin,cardano,avalanche-2,chainlink,polkadot";
   const API_URL = `https://api.coingecko.com/api/v3/simple/price?ids=${COINS}&vs_currencies=usd&include_24hr_change=true`;
 
   const COIN_MAP = {
@@ -27,6 +28,8 @@ export default async function(ctx) {
     dogecoin:     { symbol: "DOGE", name: "Dogecoin",  icon: "hare.fill",                color: "#C3A634" },
     cardano:      { symbol: "ADA",  name: "Cardano",   icon: "circle.grid.cross.fill",   color: "#0033AD" },
     "avalanche-2":{ symbol: "AVAX", name: "Avalanche", icon: "triangle.fill",            color: "#E84142" },
+    chainlink:    { symbol: "LINK", name: "Chainlink", icon: "link.circle.fill",         color: "#2A5ADA" }, // 🌟 新增
+    polkadot:     { symbol: "DOT",  name: "Polkadot",  icon: "p.circle.fill",            color: "#E6007A" }, // 🌟 新增
   };
 
   const ALL_IDS = Object.keys(COIN_MAP);
@@ -205,15 +208,17 @@ export default async function(ctx) {
   const buildSystemSmall = (prices) => {
     const rows = filterAvailable(["bitcoin", "ethereum", "solana", "binancecoin"], prices)
       .map(id => coinRow(id, prices[id], true));
-    return systemWidget([12, 16], systemBody("Crypto", 13, 14, [rowGroup(rows, 6)])); // 🌟 统一边距
+    return systemWidget([12, 16], systemBody("Crypto", 13, 14, [rowGroup(rows, 6)]));
   };
 
   const buildSystemMedium = (prices) => {
     const ids = filterAvailable(ALL_IDS, prices);
-    const left = ids.slice(0, 4).map(id => coinRow(id, prices[id], true));
-    const right = ids.slice(4).map(id => coinRow(id, prices[id], true));
+    // 🌟 动态平分逻辑：如果有 10 个币种，会自动变为左边 5 个、右边 5 个
+    const halfIndex = Math.ceil(ids.length / 2);
+    const left = ids.slice(0, halfIndex).map(id => coinRow(id, prices[id], true));
+    const right = ids.slice(halfIndex).map(id => coinRow(id, prices[id], true));
 
-    return systemWidget([12, 16], systemBody("Crypto Tracker", 14, 18, [ // 🌟 统一边距
+    return systemWidget([12, 16], systemBody("Crypto Tracker", 14, 18, [
       hstack([
         rowGroup(left, 5),
         vstack([], { width: 0.5, height: 100, backgroundColor: THEME.line }),
@@ -229,7 +234,7 @@ export default async function(ctx) {
     const rows = filterAvailable(restIds, prices)
       .map(id => coinRow(id, prices[id], true));
 
-    return systemWidget([14, 16], systemBody("Crypto Tracker", 16, 20, [ // 🌟 统一边距
+    return systemWidget([14, 16], systemBody("Crypto Tracker", 16, 20, [
       rowGroup(featured, 8),
       spacer(),
       sectionLabel("MARKET"),
@@ -245,7 +250,7 @@ export default async function(ctx) {
     const restCards = filterAvailable(restIds, prices)
       .map(id => coinCard(id, prices[id], "small"));
 
-    return systemWidget([14, 16], systemBody("Crypto Tracker", 20, 24, [ // 🌟 统一边距
+    return systemWidget([14, 16], systemBody("Crypto Tracker", 20, 24, [
       hstack(featured, { gap: 10 }),
       spacer(),
       sectionLabel("MARKET"),
