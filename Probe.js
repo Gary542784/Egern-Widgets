@@ -2,24 +2,26 @@
 // 完美布局版 | 头部融合实时网速 | IP并列展示 | 底部信息对称排版
 
 export default async function (ctx) {
-  // ─── 1. 基础配置区域 ────────────
+  // ─── 1. 基础配置区域 (已修改为读取 Egern 环境变量) ────────────
+  const env = ctx.env || {}; // 获取 Egern 环境变量
+  
   const SERVER_CONFIG = {
-    widgetName: 'My Node',        // 小组件上显示的名称
+    widgetName: env.WIDGET_NAME || 'My Node',        // 小组件名称
     
-    // 👇 SSH 服务器登录信息
-    host: '1.2.3.4',              // 服务器 IP 或域名
-    port: 22,                     // SSH 端口
-    username: 'root',             // SSH 登录用户名
-    password: 'your_password',    // SSH 密码
-    privateKey: '',               // SSH 私钥 (优先于密码)
+    // 👇 SSH 服务器登录信息 (优先读取环境变量)
+    host: env.SERVER_HOST || '',                     // 服务器 IP 或域名
+    port: Number(env.SERVER_PORT) || 22,             // SSH 端口，默认 22
+    username: env.SERVER_USER || 'root',             // SSH 用户名，默认 root
+    password: env.SERVER_PASSWORD || '',             // SSH 密码
+    privateKey: env.SERVER_KEY || '',                // SSH 私钥 (优先于密码)
     
-    // 👇 BWH 搬瓦工 API 配置 (优先读取此项，若非瓦工机器请留空)
-    bwhVeid: '',                  // 填入 VEID
-    bwhApiKey: '',                // 填入 API KEY
+    // 👇 BWH 搬瓦工 API 配置
+    bwhVeid: env.BWH_VEID || '',                     // 搬瓦工 VEID
+    bwhApiKey: env.BWH_API_KEY || '',                // 搬瓦工 API KEY
 
     // 👇 非搬瓦工机器的降级配置 (本地网卡双向统计)
-    trafficLimitGB: 2000,         // 每月流量上限 (GB)
-    resetDay: 1                   // 每月流量重置日 (1-31)
+    trafficLimitGB: Number(env.TRAFFIC_LIMIT) || 2000, // 每月流量上限 (GB)
+    resetDay: Number(env.RESET_DAY) || 1             // 每月流量重置日
   };
 
   // ─── 2. 多彩专属配色主题 ────────────
@@ -53,7 +55,6 @@ export default async function (ctx) {
     return Math.round(b) + 'B';
   };
 
-  // 本地降级用的重置日期计算 (默认到 00:00)
   const getNextResetDate = (resetDay) => {
     const now = new Date();
     let y = now.getFullYear(), m = now.getMonth();
@@ -67,7 +68,11 @@ export default async function (ctx) {
   try {
     const { host, port, username, password, privateKey, widgetName, bwhVeid, bwhApiKey, trafficLimitGB, resetDay } = SERVER_CONFIG;
     
-    // 1. 获取 BWH API 数据
+    // 检查是否填写了必要的环境变量
+    if (!host) {
+      throw new Error('未配置 SERVER_HOST 环境变量');
+    }
+
     let bwhData = null;
     if (bwhVeid && bwhApiKey) {
       try {
@@ -76,7 +81,6 @@ export default async function (ctx) {
       } catch (e) { console.log('BWH API Error:', e); }
     }
 
-    // 2. 获取 SSH 底层数据
     const session = await ctx.ssh.connect({
       host, port: Number(port || 22), username,
       ...(privateKey ? { privateKey } : { password }),
@@ -85,31 +89,29 @@ export default async function (ctx) {
 
     const SEP = '<<SEP>>';
     const cmds = [
-      'hostname -s 2>/dev/null || hostname',                                                               // 0: 主机名
-      'cat /proc/loadavg',                                                                                 // 1: 负载
-      'cat /proc/uptime',                                                                                  // 2: 运行时间
-      'head -1 /proc/stat',                                                                                // 3: CPU
-      "awk '/MemTotal/{t=$2}/MemFree/{f=$2}/Buffers/{b=$2}/^Cached/{c=$2}END{print t,f,b,c}' /proc/meminfo", // 4: 精准内存
-      'df -B1 / | tail -1',                                                                                // 5: 磁盘
-      'nproc',                                                                                             // 6: 核心数
-      "curl -s -m 2 http://ip-api.com/line?fields=country,city,query || echo ''",                          // 7: 公网IP和位置探测
-      "awk '/^ *(eth|en|wlan|ens|eno|bond|veth)/{rx+=$2;tx+=$10}END{print rx,tx}' /proc/net/dev",          // 8: 网卡流量
+      'hostname -s 2>/dev/null || hostname',
+      'cat /proc/loadavg',
+      'cat /proc/uptime',
+      'head -1 /proc/stat',
+      "awk '/MemTotal/{t=$2}/MemFree/{f=$2}/Buffers/{b=$2}/^Cached/{c=$2}END{print t,f,b,c}' /proc/meminfo",
+      'df -B1 / | tail -1',
+      'nproc',
+      "curl -s -m 2 http://ip-api.com/line?fields=country,city,query || echo ''",
+      "awk '/^ *(eth|en|wlan|ens|eno|bond|veth)/{rx+=$2;tx+=$10}END{print rx,tx}' /proc/net/dev",
     ];
     const { stdout } = await session.exec(cmds.join(` && echo '${SEP}' && `));
     await session.close();
 
     const p = stdout.split(SEP).map(s => s.trim());
-    const hostname = widgetName || p[0] || 'Server';
+    const hostname = widgetName !== 'My Node' ? widgetName : (p[0] || 'Server');
     const load = (p[1] || '0 0 0').split(' ').slice(0, 3);
     
-    // 运行时间
     const upSec = parseFloat((p[2] || '0').split(' ')[0]);
     const upDays = Math.floor(upSec / 86400);
     const upHours = Math.floor((upSec % 86400) / 3600);
     const upMins = Math.floor((upSec % 3600) / 60);
     const uptime = upDays > 0 ? `${upDays}天 ${upHours}小时` : `${upHours}小时 ${upMins}分`;
 
-    // CPU
     const cpuNums = (p[3] || '').replace(/^cpu\s+/, '').split(/\s+/).map(Number);
     const cpuTotal = cpuNums.reduce((a, b) => a + b, 0);
     const cpuIdle = cpuNums[3] || 0;
@@ -121,7 +123,6 @@ export default async function (ctx) {
     ctx.storage.setJSON('_cpu', { t: cpuTotal, i: cpuIdle });
     cpuPct = Math.max(0, Math.min(100, cpuPct));
     
-    // 精准内存
     const memKB = (p[4] || '0 0 0 0').split(' ').map(Number);
     const memTotal = memKB[0] * 1024 || 1;
     const memFree = memKB[1] * 1024 || 0;
@@ -130,13 +131,11 @@ export default async function (ctx) {
     const memUsed = memTotal - memFree - memBuff - memCache;
     const memPct = Math.min(100, Math.round((memUsed / memTotal) * 100));
 
-    // 磁盘
     const df = (p[5] || '').split(/\s+/);
     const diskTotal = Number(df[1]) || 1, diskUsed = Number(df[2]) || 0;
     const diskPct = parseInt(df[4]) || 0;
     const cores = parseInt(p[6]) || 1;
 
-    // IP 与 位置信息解析
     let ipInfo = host;
     let locInfo = '未知';
     const ipApiLines = (p[7] || '').split('\n').map(s => s.trim()).filter(Boolean);
@@ -144,10 +143,9 @@ export default async function (ctx) {
       locInfo = `${ipApiLines[0]} ${ipApiLines[1]}`.replace(/United States/g, 'US').replace(/United Kingdom/g, 'UK');
       ipInfo = ipApiLines[2];
     } else if (ipApiLines.length > 0) {
-      ipInfo = ipApiLines[ipApiLines.length - 1]; // 容错
+      ipInfo = ipApiLines[ipApiLines.length - 1];
     }
 
-    // 实时网速
     const nn = (p[8] || '0 0').split(' ');
     const netRx = Number(nn[0]) || 0, netTx = Number(nn[1]) || 0;
     const prevNet = ctx.storage.getJSON('_net');
@@ -162,7 +160,6 @@ export default async function (ctx) {
     }
     ctx.storage.setJSON('_net', { rx: netRx, tx: netTx, ts: now });
 
-    // 综合流量与重置时间计算
     let tfUsed = 0, tfTotal = 1, tfPct = 0, tfReset = '';
     if (bwhData && bwhData.data_counter !== undefined) {
       tfUsed = bwhData.data_counter;
@@ -180,7 +177,6 @@ export default async function (ctx) {
       tfReset = getNextResetDate(resetDay);
     }
 
-    // 最后刷新时间
     const dNow = new Date();
     const timeStr = `${String(dNow.getHours()).padStart(2, '0')}:${String(dNow.getMinutes()).padStart(2, '0')}:${String(dNow.getSeconds()).padStart(2, '0')}`;
 
@@ -208,7 +204,6 @@ export default async function (ctx) {
 
   const divider = { type: 'stack', height: 1, backgroundColor: C.barBg, children: [{ type: 'spacer' }] };
 
-  // 💡 优化头部：加入左侧网速显示并支持长文本自动缩小
   const header = () => ({
     type: 'stack', direction: 'row', alignItems: 'center', gap: 4, children: [
       { type: 'image', src: 'sf-symbol:server.rack', color: C.text, width: 14, height: 14 },
@@ -220,7 +215,6 @@ export default async function (ctx) {
     ],
   });
 
-  // Footer：左侧刷新时间，右侧流量重置（完美对称）
   const footer = {
     type: 'stack', direction: 'row', alignItems: 'center', children: [
       { type: 'image', src: 'sf-symbol:arrow.triangle.2.circlepath', color: C.dim, width: 9, height: 9 },
@@ -241,7 +235,7 @@ export default async function (ctx) {
     };
   }
 
-  // ─── Small Widget (保持紧凑) ────────────
+  // ─── Widgets Layout ────────────
   if (ctx.widgetFamily === 'systemSmall') {
     return {
       type: 'widget', backgroundColor: C.bg, padding: 12, gap: 5,
@@ -273,7 +267,6 @@ export default async function (ctx) {
     };
   }
 
-  // ─── Medium Widget (优化排版版) ────────────
   if (ctx.widgetFamily === 'systemMedium') {
     return {
       type: 'widget', backgroundColor: C.bg, padding: [12, 16],
@@ -281,7 +274,6 @@ export default async function (ctx) {
         header(),
         { type: 'spacer' },
         { type: 'stack', direction: 'column', gap: 6, children: [
-          // CPU 行 (右侧完美并列加黑的 IP 与 位置)
           { type: 'stack', direction: 'column', gap: 3, children: [
             { type: 'stack', direction: 'row', alignItems: 'center', gap: 4, children: [
               { type: 'image', src: 'sf-symbol:cpu', color: C.cpu, width: 11, height: 11 },
@@ -295,7 +287,6 @@ export default async function (ctx) {
             ]},
             bar(d.cpuPct, C.cpu),
           ]},
-          // MEM
           { type: 'stack', direction: 'column', gap: 3, children: [
             { type: 'stack', direction: 'row', alignItems: 'center', gap: 4, children: [
               { type: 'image', src: 'sf-symbol:memorychip', color: C.mem, width: 11, height: 11 },
@@ -306,7 +297,6 @@ export default async function (ctx) {
             ]},
             bar(d.memPct, C.mem),
           ]},
-          // TRAFFIC (重置时间已移至底部，这里更干净)
           { type: 'stack', direction: 'column', gap: 3, children: [
             { type: 'stack', direction: 'row', alignItems: 'center', gap: 4, children: [
               { type: 'image', src: 'sf-symbol:antenna.radiowaves.left.and.right', color: getTrafficColor(d.tfPct), width: 11, height: 11 },
@@ -317,7 +307,6 @@ export default async function (ctx) {
             ]},
             bar(d.tfPct, getTrafficColor(d.tfPct)),
           ]},
-          // DSK
           { type: 'stack', direction: 'column', gap: 3, children: [
             { type: 'stack', direction: 'row', alignItems: 'center', gap: 4, children: [
               { type: 'image', src: 'sf-symbol:internaldrive', color: C.disk, width: 11, height: 11 },
@@ -335,13 +324,11 @@ export default async function (ctx) {
     };
   }
 
-  // ─── Large Widget (同样优化) ────────────
   return {
     type: 'widget', backgroundColor: C.bg, padding: [14, 16], gap: 8,
     children: [
       header(),
       divider,
-      // CPU + IP位置
       { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
         { type: 'image', src: 'sf-symbol:cpu', color: C.cpu, width: 14, height: 14 },
         { type: 'text', text: `CPU ${d.cores}C`, font: { size: 12, weight: 'bold' }, textColor: C.text },
@@ -354,7 +341,6 @@ export default async function (ctx) {
       ]},
       bar(d.cpuPct, C.cpu, 6),
       divider,
-      // MEM
       { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
         { type: 'image', src: 'sf-symbol:memorychip', color: C.mem, width: 14, height: 14 },
         { type: 'text', text: 'MEMORY', font: { size: 12, weight: 'bold' }, textColor: C.text },
@@ -364,7 +350,6 @@ export default async function (ctx) {
       ]},
       bar(d.memPct, C.mem, 6),
       divider,
-      // TRAFFIC
       { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
         { type: 'image', src: 'sf-symbol:antenna.radiowaves.left.and.right', color: getTrafficColor(d.tfPct), width: 14, height: 14 },
         { type: 'text', text: 'TRAFFIC', font: { size: 12, weight: 'bold' }, textColor: C.text },
@@ -374,7 +359,6 @@ export default async function (ctx) {
       ]},
       bar(d.tfPct, getTrafficColor(d.tfPct), 6),
       divider,
-      // DSK
       { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
         { type: 'image', src: 'sf-symbol:internaldrive', color: C.disk, width: 14, height: 14 },
         { type: 'text', text: 'STORAGE', font: { size: 12, weight: 'bold' }, textColor: C.text },
