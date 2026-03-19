@@ -1,14 +1,14 @@
 /**
- * 🚀 全功能网络看板 Pro (沉浸左对齐版 · 原汁原味修复版)
- * 仅修改深色模式背景色为 #121212，完美融入系统卡片，绝不乱改字体和数据项
+ * ==========================================
+ * 📌 代码名称: 🌐 全功能网络看板 Pro (统一 UI 版)
+ * ==========================================
  */
 export default async function(ctx) {
-  // ===================== iOS 深浅自适应主题 =====================
-  // 🌟 核心修复：深色背景改为 #121212，解决与系统背景糊在一起的问题
+  // 🎨 统一 UI 规范颜色
   const BG_MAIN   = { light: '#FFFFFF', dark: '#121212' }; 
-  const C_TEXT    = { light: '#333333', dark: '#E5E5EA' }; 
-  const C_SUB     = { light: '#8E8E93', dark: '#8E8E93' }; 
-  const C_TITLE   = { light: '#111111', dark: '#FFFFFF' }; 
+  const C_TEXT    = { light: '#1C1C1E', dark: '#FFFFFF' }; // 🌟 统一主色
+  const C_SUB     = { light: '#8E8E93', dark: '#8E8E93' }; // 🌟 统一弱化色
+  const C_TITLE   = { light: '#1C1C1E', dark: '#FFFFFF' }; 
   
   const C_GREEN   = { light: '#34C759', dark: '#30D158' }; 
   const C_BLUE    = { light: '#007AFF', dark: '#0A84FF' }; 
@@ -16,7 +16,6 @@ export default async function(ctx) {
   const C_ORANGE  = { light: '#FF9500', dark: '#FF9F0A' }; 
   const C_RED     = { light: '#FF3B30', dark: '#FF453A' }; 
 
-  // ===================== 辅助函数 =====================
   const fmtLocalISP = (isp) => {
     if (!isp) return "未知";
     const s = String(isp).toLowerCase();
@@ -49,7 +48,6 @@ export default async function(ctx) {
     return String.fromCodePoint(...code.toUpperCase().split('').map(c => 127397 + c.charCodeAt()));
   };
 
-  // ===================== 网络状态获取 =====================
   const d = ctx.device || {};
   const isWifi = !!d.wifi?.ssid;
   let netName = "未连接", netIcon = "wifi";
@@ -68,7 +66,6 @@ export default async function(ctx) {
     gateway = "蜂窝内网";
   }
 
-  // ===================== 解锁检测核心算法 =====================
   const BASE_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1";
   const commonHeaders = { "User-Agent": BASE_UA };
   const readBody = async (r) => {
@@ -147,7 +144,6 @@ export default async function(ctx) {
     } catch { return "❌"; }
   }
 
-  // ===================== 并发请求执行 =====================
   const globalStart = Date.now();
   let realTcpDelay = 0;
 
@@ -167,7 +163,6 @@ export default async function(ctx) {
     ...unlockTasks
   ]);
 
-  // ===================== 数据解析与渲染 =====================
   let lIp = "—", lLoc = "—", lIsp = "—";
   try {
     if (lResRaw) {
@@ -227,7 +222,6 @@ export default async function(ctx) {
   const dNow = new Date();
   const timeStr = `${String(dNow.getHours()).padStart(2, '0')}:${String(dNow.getMinutes()).padStart(2, '0')}:${String(dNow.getSeconds()).padStart(2, '0')}`;
 
-  // ===================== UI 布局组件 (绝对保留原版字体和间距) =====================
   const Row = (ic, labelCol, label, val, isLast = false) => ({
     type: 'stack', direction: 'row', alignItems: 'center', gap: 6, padding: [2.5, 0],
     children: [
@@ -240,11 +234,10 @@ export default async function(ctx) {
 
   return {
     type: 'widget', 
-    padding: 14,
-    backgroundColor: BG_MAIN, // 🌟 应用了解决边界问题的背景色
+    padding: [14, 16], // 🌟 统一边距
+    backgroundColor: BG_MAIN, 
     refreshPolicy: { onNetworkChange: true, onEnter: true, timeout: 10 },
     children: [
-      // 头部：原封不动的 14 号粗体 (heavy)
       { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
           { type: 'image', src: `sf-symbol:${netIcon}`, color: C_TITLE, width: 16, height: 16 },
           { type: 'text', text: headerTitle, font: { size: 14, weight: 'heavy' }, textColor: C_TITLE },
@@ -255,8 +248,6 @@ export default async function(ctx) {
           ]}
       ]},
       { type: 'spacer', length: 10 },
-      
-      // 内容区：原封不动的 5 行内容
       { type: 'stack', direction: 'column', gap: 1, children: [
           Row("house.fill", C_GREEN, "内网", ` ${localIp} / ${gateway}`),
           Row("paperplane.circle.fill", C_BLUE, "本地", ` ${lIp} / ${lLoc}`),
@@ -265,8 +256,6 @@ export default async function(ctx) {
           Row("play.tv.fill", C_ORANGE, "解锁", ` ${unlockText}`, true) 
       ]},
       { type: 'spacer' },
-
-      // 底部：只加了时间，不重复显示“商业机房”
       { type: 'stack', direction: 'row', alignItems: 'center', children: [
           { type: 'image', src: 'sf-symbol:arrow.triangle.2.circlepath', color: C_SUB, width: 9, height: 9 },
           { type: 'text', text: ` 刷新于 ${timeStr}`, font: { size: 10, weight: 'medium' }, textColor: C_SUB },
