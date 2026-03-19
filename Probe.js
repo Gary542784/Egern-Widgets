@@ -1,5 +1,5 @@
 // Server Monitor Widget Pro for Egern
-// 完美布局版 | IP并列展示 | 底部信息对称排版
+// 完美布局版 | 头部融合实时网速 | IP并列展示 | 底部信息对称排版
 
 export default async function (ctx) {
   // ─── 1. 基础配置区域 ────────────
@@ -86,7 +86,7 @@ export default async function (ctx) {
     const SEP = '<<SEP>>';
     const cmds = [
       'hostname -s 2>/dev/null || hostname',                                                               // 0: 主机名
-      'cat /proc/loadavg',                                                                                 // 1: 负载 (虽然删除了显示，但保留数据获取以防以后需要)
+      'cat /proc/loadavg',                                                                                 // 1: 负载
       'cat /proc/uptime',                                                                                  // 2: 运行时间
       'head -1 /proc/stat',                                                                                // 3: CPU
       "awk '/MemTotal/{t=$2}/MemFree/{f=$2}/Buffers/{b=$2}/^Cached/{c=$2}END{print t,f,b,c}' /proc/meminfo", // 4: 精准内存
@@ -100,6 +100,7 @@ export default async function (ctx) {
 
     const p = stdout.split(SEP).map(s => s.trim());
     const hostname = widgetName || p[0] || 'Server';
+    const load = (p[1] || '0 0 0').split(' ').slice(0, 3);
     
     // 运行时间
     const upSec = parseFloat((p[2] || '0').split(' ')[0]);
@@ -184,7 +185,7 @@ export default async function (ctx) {
     const timeStr = `${String(dNow.getHours()).padStart(2, '0')}:${String(dNow.getMinutes()).padStart(2, '0')}:${String(dNow.getSeconds()).padStart(2, '0')}`;
 
     d = {
-      hostname, uptime, cpuPct, cores,
+      hostname, uptime, load, cpuPct, cores,
       memTotal, memUsed, memPct, diskTotal, diskUsed, diskPct,
       rxRate, txRate, netRx, netTx,
       tfUsed, tfTotal, tfPct, tfReset, timeStr, ipInfo, locInfo
@@ -207,13 +208,15 @@ export default async function (ctx) {
 
   const divider = { type: 'stack', height: 1, backgroundColor: C.barBg, children: [{ type: 'spacer' }] };
 
-  // 恢复清爽的单行 Header
+  // 💡 优化头部：加入左侧网速显示并支持长文本自动缩小
   const header = () => ({
-    type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
+    type: 'stack', direction: 'row', alignItems: 'center', gap: 4, children: [
       { type: 'image', src: 'sf-symbol:server.rack', color: C.text, width: 14, height: 14 },
-      { type: 'text', text: d.hostname, font: { size: 'headline', weight: 'bold' }, textColor: C.text, maxLines: 1 },
+      { type: 'text', text: d.hostname, font: { size: 'headline', weight: 'bold' }, textColor: C.text, maxLines: 1, minScale: 0.6 },
       { type: 'spacer' },
-      { type: 'text', text: d.uptime, font: { size: 'caption2', weight: 'medium' }, textColor: C.dim, maxLines: 1 },
+      { type: 'text', text: `↓${fmtBytes(d.rxRate)}/s ↑${fmtBytes(d.txRate)}/s`, font: { size: 9, family: 'Menlo', weight: 'bold' }, textColor: C.dim, minScale: 0.8 },
+      { type: 'text', text: '•', font: { size: 9 }, textColor: C.dim, opacity: 0.6 },
+      { type: 'text', text: d.uptime, font: { size: 10, weight: 'medium' }, textColor: C.dim, maxLines: 1, minScale: 0.8 },
     ],
   });
 
@@ -380,15 +383,6 @@ export default async function (ctx) {
         { type: 'text', text: `${fmtBytes(d.diskUsed)} / ${fmtBytes(d.diskTotal)}`, font: { size: 11, family: 'Menlo', weight: 'medium' }, textColor: C.dim },
       ]},
       bar(d.diskPct, C.disk, 6),
-      divider,
-      // NETWORK SPEED
-      { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
-        { type: 'image', src: 'sf-symbol:network', color: C.text, width: 14, height: 14 },
-        { type: 'text', text: 'SPEED', font: { size: 12, weight: 'bold' }, textColor: C.text },
-        { type: 'spacer' },
-        { type: 'text', text: `↓ ${fmtBytes(d.rxRate)}/s`, font: { size: 12, family: 'Menlo', weight: 'bold' }, textColor: C.netRx },
-        { type: 'text', text: `↑ ${fmtBytes(d.txRate)}/s`, font: { size: 12, family: 'Menlo', weight: 'bold' }, textColor: C.netTx },
-      ]},
       { type: 'spacer' },
       footer,
     ],
