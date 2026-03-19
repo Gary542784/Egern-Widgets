@@ -1,23 +1,23 @@
 /**
- * 🚀 Crypto Price Widget - Egern Adaptive Pro
- * ✨ 特色：完美恢复原版双列/卡片布局，纯黑白高级自适应配色，支持全尺寸
+ * ==========================================
+ * 📌 代码名称: 🪙 Crypto Price Widget (统一 UI 版)
+ * ==========================================
  */
 export default async function(ctx) {
-  // --- 1. 统一定义 Egern 自适应颜色对象 ---
+  // 🎨 统一 UI 规范颜色
   const THEME = {
-    bg:      { light: '#FFFFFF', dark: '#000000' }, // 纯粹的黑白背景
-    text:    { light: '#000000', dark: '#FFFFFF' }, // 主文字黑白反转
-    textSec: { light: '#8E8E93', dark: '#A2A2B5' }, // 副标题灰度（夜间稍亮保证可读性）
-    line:    { light: '#E5E5EA', dark: '#1C1C1E' }, // 分割线颜色
-    accent:  { light: '#000000', dark: '#FFFFFF' }, // 强调色去蓝，改为纯黑白
-    green:   { light: '#34C759', dark: '#32D74B' }, // 涨：系统原生绿
-    red:     { light: '#FF3B30', dark: '#FF375F' }  // 跌：系统原生红
+    bg:      { light: '#FFFFFF', dark: '#121212' }, // 🌟 统一黑白背景色
+    text:    { light: '#1C1C1E', dark: '#FFFFFF' }, // 🌟 统一主文字色
+    textSec: { light: '#8E8E93', dark: '#8E8E93' }, // 🌟 统一弱化文本色
+    line:    { light: '#E5E5EA', dark: '#38383A' }, // 🌟 统一分割线颜色
+    accent:  { light: '#1C1C1E', dark: '#FFFFFF' }, 
+    green:   { light: '#34C759', dark: '#30D158' }, 
+    red:     { light: '#FF3B30', dark: '#FF453A' }  
   };
 
   const COINS = "bitcoin,ethereum,solana,binancecoin,ripple,dogecoin,cardano,avalanche-2";
   const API_URL = `https://api.coingecko.com/api/v3/simple/price?ids=${COINS}&vs_currencies=usd&include_24hr_change=true`;
 
-  // 币种品牌色保持纯色，不受深浅模式影响，用于生成半透明背景
   const COIN_MAP = {
     bitcoin:      { symbol: "BTC",  name: "Bitcoin",   icon: "bitcoinsign.circle.fill",  color: "#F7931A" },
     ethereum:     { symbol: "ETH",  name: "Ethereum",  icon: "diamond.fill",             color: "#627EEA" },
@@ -31,7 +31,6 @@ export default async function(ctx) {
 
   const ALL_IDS = Object.keys(COIN_MAP);
 
-  // --- 2. 格式化工具 ---
   const formatPrice = (price) => {
     if (price >= 1000) return "$" + price.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     if (price >= 1) return "$" + price.toFixed(2);
@@ -47,7 +46,6 @@ export default async function(ctx) {
   const changeColor = (change) => change >= 0 ? THEME.green : THEME.red;
   const changeIcon = (change) => change >= 0 ? "arrow.up.right" : "arrow.down.right";
 
-  // --- 3. UI 基础构建块 (适配 THEME 颜色) ---
   const txt = (text, fontSize, weight, color, opts) => ({
     type: "text",
     text: text,
@@ -90,12 +88,11 @@ export default async function(ctx) {
 
   const cardGradient = (color) => ({
     type: "linear",
-    colors: [color + "33", color + "11"], // 币种半透明渐变，使用原始品牌色
+    colors: [color + "33", color + "11"], 
     startPoint: { x: 0, y: 0 },
     endPoint: { x: 1, y: 1 },
   });
 
-  // --- 4. 共享组件 ---
   const separator = () => hstack([spacer()], { height: 0.5, backgroundColor: THEME.line });
 
   const headerBar = (title, titleSize, iconSize, showTime) => {
@@ -119,7 +116,6 @@ export default async function(ctx) {
 
   const sectionLabel = (label) => txt(label, 10, "semibold", THEME.textSec);
 
-  // --- 5. 核心布局区块 ---
   const CARD_PRESETS = {
     small:  { layout: "column", iconSize: 14, priceSize: 15, symbolSize: 12, changeSize: 11, changeIconSize: 8,  borderRadius: 10, padding: [8, 10, 8, 10],   borderWidth: 0.5, nameSize: 0,  innerGap: 3 },
     medium: { layout: "row",    iconSize: 20, priceSize: 18, symbolSize: 16, changeSize: 13, changeIconSize: 10, borderRadius: 14, padding: [10, 12, 10, 12], borderWidth: 1,   nameSize: 10, innerGap: 6 },
@@ -187,12 +183,11 @@ export default async function(ctx) {
   const rowGroup = (items, gap) => vstack(items, { gap: gap || 6 });
   const filterAvailable = (ids, prices) => ids.filter(id => prices[id]);
 
-  // --- 6. Widget 容器组装 ---
   const systemWidget = (padding, children, extraOpts = {}) => ({
     type: "widget",
     gap: 0,
     padding: padding,
-    backgroundColor: THEME.bg, // 纯色黑白自适应底色
+    backgroundColor: THEME.bg, 
     children: children,
     ...extraOpts
   });
@@ -207,11 +202,10 @@ export default async function(ctx) {
     footerBar(),
   ];
 
-  // --- 7. 多尺寸渲染逻辑 ---
   const buildSystemSmall = (prices) => {
     const rows = filterAvailable(["bitcoin", "ethereum", "solana", "binancecoin"], prices)
       .map(id => coinRow(id, prices[id], true));
-    return systemWidget([12, 14, 10, 14], systemBody("Crypto", 13, 14, [rowGroup(rows, 6)]));
+    return systemWidget([12, 16], systemBody("Crypto", 13, 14, [rowGroup(rows, 6)])); // 🌟 统一边距
   };
 
   const buildSystemMedium = (prices) => {
@@ -219,7 +213,7 @@ export default async function(ctx) {
     const left = ids.slice(0, 4).map(id => coinRow(id, prices[id], true));
     const right = ids.slice(4).map(id => coinRow(id, prices[id], true));
 
-    return systemWidget([12, 14, 10, 14], systemBody("Crypto Tracker", 14, 18, [
+    return systemWidget([12, 16], systemBody("Crypto Tracker", 14, 18, [ // 🌟 统一边距
       hstack([
         rowGroup(left, 5),
         vstack([], { width: 0.5, height: 100, backgroundColor: THEME.line }),
@@ -235,7 +229,7 @@ export default async function(ctx) {
     const rows = filterAvailable(restIds, prices)
       .map(id => coinRow(id, prices[id], true));
 
-    return systemWidget([12, 14, 10, 14], systemBody("Crypto Tracker", 16, 20, [
+    return systemWidget([14, 16], systemBody("Crypto Tracker", 16, 20, [ // 🌟 统一边距
       rowGroup(featured, 8),
       spacer(),
       sectionLabel("MARKET"),
@@ -251,7 +245,7 @@ export default async function(ctx) {
     const restCards = filterAvailable(restIds, prices)
       .map(id => coinCard(id, prices[id], "small"));
 
-    return systemWidget([14, 16, 12, 16], systemBody("Crypto Tracker", 20, 24, [
+    return systemWidget([14, 16], systemBody("Crypto Tracker", 20, 24, [ // 🌟 统一边距
       hstack(featured, { gap: 10 }),
       spacer(),
       sectionLabel("MARKET"),
@@ -267,7 +261,6 @@ export default async function(ctx) {
     systemExtraLarge: buildSystemExtraLarge,
   };
 
-  // --- 8. 主入口请求逻辑 ---
   const family = ctx.widgetFamily;
   try {
     const resp = await ctx.http.get(API_URL);
@@ -275,12 +268,11 @@ export default async function(ctx) {
     const build = BUILDERS[family] || buildSystemMedium;
     const widget = build(prices);
     
-    // 设置刷新策略
     widget.refreshAfter = new Date(Date.now() + 60 * 1000).toISOString();
     return widget;
   } catch (e) {
     return {
-      type: "widget", padding: 16, backgroundColor: THEME.bg,
+      type: "widget", padding: [14, 16], backgroundColor: THEME.bg,
       children: [{ type: "text", text: "Failed to load prices", font: { size: 14, weight: "medium" }, textColor: THEME.red }]
     };
   }
