@@ -1,10 +1,12 @@
 /**
- * 🚀 全功能网络看板 Pro (沉浸左对齐版 · 新增机房提供商)
+ * 🚀 全功能网络看板 Pro (沉浸左对齐版 · 修复深色模式边框)
  * 优化：在属性栏精准提取并显示 VPS/机房商家名称，增强排版美观度
+ * 新增：自适应深浅色模式的边框线与圆角，提升深色模式下的视觉层次
  */
 export default async function(ctx) {
   // ===================== iOS 深浅自适应主题 =====================
   const BG_MAIN   = { light: '#FFFFFF', dark: '#1C1C1E' }; 
+  const C_BORDER  = { light: '#E5E5EA', dark: '#38383A' }; // 新增：自适应边框颜色
   const C_TEXT    = { light: '#333333', dark: '#E5E5EA' }; 
   const C_SUB     = { light: '#8E8E93', dark: '#8E8E93' }; 
   const C_TITLE   = { light: '#111111', dark: '#FFFFFF' }; 
@@ -191,7 +193,6 @@ export default async function(ctx) {
       const asnMatch = nData.as ? nData.as.match(/(AS\d+)/) : null;
       asn = asnMatch ? asnMatch[1] : "未知ASN";
       
-      // ✅ 获取并格式化机房提供商 (ISP/Org)
       proxyProvider = fmtProxyISP(nData.isp || nData.org);
     }
   } catch (e) {}
@@ -244,6 +245,9 @@ export default async function(ctx) {
     type: 'widget', 
     padding: 14,
     backgroundColor: BG_MAIN,
+    cornerRadius: 16,        // 新增：圆角边缘，匹配 iOS 规范
+    borderWidth: 1,          // 新增：边框宽度
+    borderColor: C_BORDER,   // 新增：自适应边框颜色
     refreshPolicy: { onNetworkChange: true, onEnter: true, timeout: 10 },
     children: [
       { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
@@ -261,7 +265,6 @@ export default async function(ctx) {
           Row("house.fill", C_GREEN, "内网", ` ${localIp} / ${gateway}`),
           Row("paperplane.circle.fill", C_BLUE, "本地", ` ${lIp} / ${lLoc}`),
           Row("globe", C_PURPLE, "落地", ` ${nIp} / ${getFlag(nCountryCode)} ${nLoc} / ${asn}`),
-          // ✅ 机房提供商添加到这里：商家 / 类型 / 风险
           Row("shield.lefthalf.filled", riskCol, "属性", ` ${proxyProvider} / ${ipTypeStr} / ${riskTxt}`),
           Row("play.tv.fill", C_ORANGE, "解锁", ` ${unlockText}`, true) 
       ]},
