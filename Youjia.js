@@ -2,9 +2,7 @@
  * ==========================================
  * 📌 代码名称: ⛽ 全国油价及调价预测（默认成都）
  * ✨ 特色功能: 实时获取各标号油价及涨跌趋势；精简油价单位为 ¥/L；智能预告并精准倒数下轮调价窗口；支持模块化配置地区；支持点击跳转哈啰App；统一上下角标字号，像素级完美对齐。
- * 🎨 优化亮点: 针对深色模式优化背景及色块层级感，解决 gray 感过重、边界不清和中间不 coordinated 的问题，呈现 crisp & coordination 视觉体验。
- * 🔗 引用链接: https://raw.githubusercontent.com/jnlaoshu/MySelf/master/Egern/Widget/GasPrice.js
- * ⏱️ 更新时间: 2026.03.17 08:42
+ * 🌟 修复说明: 完全引用完美布局版网络看板的深色背景 (#121212)，移除糊成一团的渐变背景，内部色块使用 #1C1C1E 增强边界清晰度。
  * ==========================================
  */
 
@@ -14,34 +12,19 @@ export default async function (ctx) {
     const regionParam = ctx.env.GAS_REGION || ctx.env.region || "sichuan/chengdu"; 
     const SHOW_TREND = (ctx.env.SHOW_TREND || "true").trim() !== "false";
 
-    // ==========================================
-    // 🎨 ⭐ 配色主题调整区域 ⭐
-    // 主要优化了深色模式（dark）的 gray 亮度和层级对比度
-    // ==========================================
+    // 🌟 完全引用网络看板的纯净底色，弃用渐变
+    const BG_MAIN = { light: '#FFFFFF', dark: '#121212' }; 
+    // 🌟 内部色块稍微提亮一点点，形成清晰的模块边界
+    const BLOCK_BG = { light: '#F2F2F7', dark: '#1C1C1E' }; 
     
-    // 🏆 主卡片背景 (调整点：拉高了深色模式亮度，拉开与原生卡片边界)
-    const BG_COLORS = [
-        { light: '#FFFFFF', dark: '#2C2C2E' }, // 深色模式主背景：更浅的卡片灰
-        { light: '#F5F5F9', dark: '#222224' }  // 深色模式渐变底：更清晰，不糊
-    ]; 
-    
-    // 🏆 内部价格色块背景 (调整点：相应拉高亮度，确保在浅色背景上对比清晰)
-    const BLOCK_BG = { light: '#F2F2F7', dark: '#3A3A3C' }; // 深色模式色块：更高的对比度
-
-    // 🏆 文字及强调色
-    const TEXT_MAIN = { light: '#1C1C1E', dark: '#FFFFFF' };  // 深色模式主要文字：纯白更锐利
+    const TEXT_MAIN = { light: '#1C1C1E', dark: '#FFFFFF' };
     const TEXT_SUB = { light: '#48484A', dark: '#D1D1D6' }; 
-    // 🏆 辅助文字 (调整点：轻微拉高深色亮度，提升 legibility)
-    const TEXT_MUTED = { light: '#8E8E93', dark: '#A2A2A7' }; 
+    const TEXT_MUTED = { light: '#8E8E93', dark: '#8E8E93' }; 
 
     const COLOR_GOLD = { light: '#B58A28', dark: '#D6A53A' }; 
     const COLOR_RED = { light: '#CA3B32', dark: '#FF453A' };   
     const COLOR_BLUE = { light: '#3A5F85', dark: '#5E8EB8' };  
     const COLOR_TEAL = { light: '#628C7B', dark: '#73A491' };  
-
-    // ==========================================
-    // 逻辑和布局保持原样
-    // ==========================================
 
     const CALENDAR_2026 = [
       {m: 1, d: 12}, {m: 1, d: 23}, {m: 2, d: 9},  {m: 2, d: 23}, {m: 3, d: 9},  {m: 3, d: 23}, {m: 4, d: 7},  {m: 4, d: 21}, 
@@ -119,7 +102,7 @@ export default async function (ctx) {
       type: "widget", 
       padding: 12,
       url: "hellobike://",
-      backgroundGradient: { type: 'linear', colors: BG_COLORS, startPoint: { x: 0, y: 0 }, endPoint: { x: 1, y: 1 } },
+      backgroundColor: BG_MAIN, // 🌟 核心修改：使用纯色背景
       children: [
         { type: "stack", direction: "row", alignItems: "center", children: [
             { type: "stack", direction: "row", alignItems: "center", gap: 6, children: [
@@ -175,11 +158,10 @@ export default async function (ctx) {
       ]
     };
   } catch (err) {
-    // 错误处理也需要同步优化深色配色
     return {
       type: 'widget',
       padding: 12,
-      backgroundGradient: { type: 'linear', colors: [{ light: '#FFFFFF', dark: '#2C2C2E' }, { light: '#F5F5F9', dark: '#222224' }], startPoint: { x:0, y:0 }, endPoint: { x:1, y:1 } },
+      backgroundColor: { light: '#FFFFFF', dark: '#121212' }, // 🌟 错误界面同步修改
       children: [
         { type: 'text', text: '油价组件出现异常 ⚠️', font: { size: 14, weight: 'heavy' }, textColor: '#FF453A' },
         { type: 'spacer', length: 4 },
