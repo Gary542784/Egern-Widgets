@@ -1,6 +1,6 @@
 /**
  * ==========================================
- * 📌 代码名称: 🖥️ Server Monitor Widget Pro (统一 UI 版)
+ * 📌 代码名称: 🖥️ Server Monitor Widget Pro (统一 UI 版 - 仪表盘进度条)
  * ==========================================
  */
 export default async function (ctx) {
@@ -21,10 +21,10 @@ export default async function (ctx) {
 
   // 🎨 统一 UI 规范颜色
   const C = {
-    bg: { light: '#FFFFFF', dark: '#121212' },       // 🌟 统一黑白背景色
+    bg: { light: '#FFFFFF', dark: '#121212' },       
     barBg: { light: '#0000001A', dark: '#FFFFFF22' },
-    text: { light: '#1C1C1E', dark: '#FFFFFF' },     // 🌟 统一主文字色
-    dim: { light: '#8E8E93', dark: '#8E8E93' },      // 🌟 统一弱化文本色
+    text: { light: '#1C1C1E', dark: '#FFFFFF' },     
+    dim: { light: '#8E8E93', dark: '#8E8E93' },      
     
     cpu: { light: '#007AFF', dark: '#0A84FF' },      
     mem: { light: '#AF52DE', dark: '#BF5AF2' },      
@@ -180,16 +180,33 @@ export default async function (ctx) {
     d = { error: String(e.message || e) };
   }
 
-  const bar = (pct, color, h = 5) => ({
-    type: 'stack', direction: 'row', height: h, borderRadius: h / 2,
-    backgroundColor: C.barBg,
-    children: pct > 0
-      ? [
-          { type: 'stack', flex: Math.max(1, pct), height: h, borderRadius: h / 2, backgroundColor: color, children: [] },
-          ...(pct < 100 ? [{ type: 'spacer', flex: 100 - pct }] : []),
-        ]
-      : [{ type: 'spacer' }],
-  });
+  // 🛠️ 核心修改：分段式科技感进度条 (Segmented LED Bar)
+  const bar = (pct, color, h = 6) => {
+    const segCount = 24; // 🌟 仪表盘格栅数量，分割成24个小块
+    const activeCount = Math.round((Math.max(0, Math.min(100, pct)) / 100) * segCount);
+    
+    return {
+      type: 'stack', 
+      direction: 'row', 
+      height: h, 
+      gap: 1.5, // 方块之间的间距
+      children: Array.from({ length: segCount }).map((_, i) => {
+        const isActive = i < activeCount;
+        
+        // 🌟 视觉魔法：已激活的格子实现从左到右的「渐变发光」效果 (透明度从 0.4 逐渐亮到 1.0)
+        const op = isActive ? (0.4 + 0.6 * (i / Math.max(activeCount - 1, 1))) : 1;
+        
+        return {
+          type: 'stack', 
+          flex: 1, 
+          height: h, 
+          borderRadius: 1, // 微微的圆角，避免边缘过于锋利
+          backgroundColor: isActive ? color : C.barBg, // 未激活时使用半透明底色
+          opacity: op
+        };
+      })
+    };
+  };
 
   const divider = { type: 'stack', height: 1, backgroundColor: C.barBg, children: [{ type: 'spacer' }] };
 
@@ -226,7 +243,7 @@ export default async function (ctx) {
 
   if (ctx.widgetFamily === 'systemSmall') {
     return {
-      type: 'widget', backgroundColor: C.bg, padding: [12, 16], gap: 5, // 🌟 统一边距
+      type: 'widget', backgroundColor: C.bg, padding: [12, 16], gap: 5, 
       children: [
         { type: 'stack', direction: 'column', gap: 1, children: [
           { type: 'stack', direction: 'row', alignItems: 'center', gap: 4, children: [
@@ -248,7 +265,7 @@ export default async function (ctx) {
               { type: 'spacer' },
               { type: 'text', text: i.v, font: { size: 10, weight: 'heavy', family: 'Menlo' }, textColor: i.c },
             ]},
-            bar(i.pt, i.c, 4),
+            bar(i.pt, i.c, 5), // 小组件进度条稍微细一点
           ]
         }))
       ],
@@ -257,7 +274,7 @@ export default async function (ctx) {
 
   if (ctx.widgetFamily === 'systemMedium') {
     return {
-      type: 'widget', backgroundColor: C.bg, padding: [12, 16], // 🌟 统一边距
+      type: 'widget', backgroundColor: C.bg, padding: [12, 16], 
       children: [
         header(),
         { type: 'spacer' },
@@ -273,7 +290,7 @@ export default async function (ctx) {
               { type: 'text', text: '•', font: { size: 10 }, textColor: C.dim },
               { type: 'text', text: d.locInfo, font: { size: 10, weight: 'bold' }, textColor: C.text, maxLines: 1, minScale: 0.8 },
             ]},
-            bar(d.cpuPct, C.cpu),
+            bar(d.cpuPct, C.cpu, 6),
           ]},
           { type: 'stack', direction: 'column', gap: 3, children: [
             { type: 'stack', direction: 'row', alignItems: 'center', gap: 4, children: [
@@ -283,7 +300,7 @@ export default async function (ctx) {
               { type: 'spacer' },
               { type: 'text', text: `${fmtBytes(d.memUsed)} / ${fmtBytes(d.memTotal)}`, font: { size: 10, family: 'Menlo', weight: 'medium' }, textColor: C.dim },
             ]},
-            bar(d.memPct, C.mem),
+            bar(d.memPct, C.mem, 6),
           ]},
           { type: 'stack', direction: 'column', gap: 3, children: [
             { type: 'stack', direction: 'row', alignItems: 'center', gap: 4, children: [
@@ -293,7 +310,7 @@ export default async function (ctx) {
               { type: 'spacer' },
               { type: 'text', text: `${fmtBytes(d.tfUsed)} / ${fmtBytes(d.tfTotal)}`, font: { size: 10, family: 'Menlo', weight: 'medium' }, textColor: C.dim },
             ]},
-            bar(d.tfPct, getTrafficColor(d.tfPct)),
+            bar(d.tfPct, getTrafficColor(d.tfPct), 6),
           ]},
           { type: 'stack', direction: 'column', gap: 3, children: [
             { type: 'stack', direction: 'row', alignItems: 'center', gap: 4, children: [
@@ -303,7 +320,7 @@ export default async function (ctx) {
               { type: 'spacer' },
               { type: 'text', text: `${fmtBytes(d.diskUsed)} / ${fmtBytes(d.diskTotal)}`, font: { size: 10, family: 'Menlo', weight: 'medium' }, textColor: C.dim },
             ]},
-            bar(d.diskPct, C.disk),
+            bar(d.diskPct, C.disk, 6),
           ]},
         ]},
         { type: 'spacer' },
@@ -313,7 +330,7 @@ export default async function (ctx) {
   }
 
   return {
-    type: 'widget', backgroundColor: C.bg, padding: [14, 16], gap: 8, // 🌟 统一边距
+    type: 'widget', backgroundColor: C.bg, padding: [14, 16], gap: 8, 
     children: [
       header(),
       divider,
@@ -327,7 +344,7 @@ export default async function (ctx) {
         { type: 'text', text: '•', font: { size: 11 }, textColor: C.dim },
         { type: 'text', text: d.locInfo, font: { size: 11, weight: 'bold' }, textColor: C.text, maxLines: 1 },
       ]},
-      bar(d.cpuPct, C.cpu, 6),
+      bar(d.cpuPct, C.cpu, 7),
       divider,
       { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
         { type: 'image', src: 'sf-symbol:memorychip', color: C.mem, width: 14, height: 14 },
@@ -336,7 +353,7 @@ export default async function (ctx) {
         { type: 'spacer' },
         { type: 'text', text: `${fmtBytes(d.memUsed)} / ${fmtBytes(d.memTotal)}`, font: { size: 11, family: 'Menlo', weight: 'medium' }, textColor: C.dim },
       ]},
-      bar(d.memPct, C.mem, 6),
+      bar(d.memPct, C.mem, 7),
       divider,
       { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
         { type: 'image', src: 'sf-symbol:antenna.radiowaves.left.and.right', color: getTrafficColor(d.tfPct), width: 14, height: 14 },
@@ -345,7 +362,7 @@ export default async function (ctx) {
         { type: 'spacer' },
         { type: 'text', text: `${fmtBytes(d.tfUsed)} / ${fmtBytes(d.tfTotal)}`, font: { size: 11, family: 'Menlo', weight: 'medium' }, textColor: C.dim },
       ]},
-      bar(d.tfPct, getTrafficColor(d.tfPct), 6),
+      bar(d.tfPct, getTrafficColor(d.tfPct), 7),
       divider,
       { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
         { type: 'image', src: 'sf-symbol:internaldrive', color: C.disk, width: 14, height: 14 },
@@ -354,7 +371,7 @@ export default async function (ctx) {
         { type: 'spacer' },
         { type: 'text', text: `${fmtBytes(d.diskUsed)} / ${fmtBytes(d.diskTotal)}`, font: { size: 11, family: 'Menlo', weight: 'medium' }, textColor: C.dim },
       ]},
-      bar(d.diskPct, C.disk, 6),
+      bar(d.diskPct, C.disk, 7),
       { type: 'spacer' },
       footer,
     ],
