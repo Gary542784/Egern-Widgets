@@ -1,16 +1,16 @@
 /**
  * ==========================================
- * 📌 代码名称: 📅 日历 / 老黄历 (统一 UI 版 - 布局优化)
+ * 📌 代码名称: 📅 日历 / 老黄历 (统一 UI 版 - 单行截断优化)
  * ==========================================
  */
 export default async function(ctx) {
   // 🎨 统一 UI 规范颜色
   const C = {
-    bg: { light: '#FFFFFF', dark: '#121212' },       // 🌟 统一黑白背景色
-    main: { light: '#1C1C1E', dark: '#FFFFFF' },     // 主文本：浅色黑，深色白
-    sub: { light: '#48484A', dark: '#D1D1D6' },      // 副文本
-    muted: { light: '#8E8E93', dark: '#8E8E93' },    // 弱化文本
-    divider: { light: '#E5E5EA', dark: '#38383A' },  // 分割线
+    bg: { light: '#FFFFFF', dark: '#121212' },
+    main: { light: '#1C1C1E', dark: '#FFFFFF' },
+    sub: { light: '#48484A', dark: '#D1D1D6' },
+    muted: { light: '#8E8E93', dark: '#8E8E93' },
+    divider: { light: '#E5E5EA', dark: '#38383A' },
     gold: { light: '#FF9500', dark: '#FFD700' },     
     yi: { light: '#34C759', dark: '#30D158' },       
     ji: { light: '#FF3B30', dark: '#FF453A' },       
@@ -23,8 +23,6 @@ export default async function(ctx) {
   const [Y, M, D] = [now.getFullYear(), now.getMonth() + 1, now.getDate()];
   const WEEK = "日一二三四五六"[now.getDay()];
   const P = n => n < 10 ? `0${n}` : n;
-  
-  const getCharWidth = (char) => char.charCodeAt(0) > 255 ? 2 : 1.1;
 
   const Lunar = {
     info: [0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970,0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557,0x06ca0,0x0b550,0x15355,0x04da0,0x0a5b0,0x14573,0x052b0,0x0a9a8,0x0e950,0x06aa0,0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0,0x096d0,0x04dd5,0x04ad0,0x0a4d0,0x0d4d4,0x0d250,0x0d558,0x0b540,0x0b6a0,0x195a6,0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b27a,0x06a50,0x06d40,0x0af46,0x0ab60,0x09570,0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06b58,0x05ac0,0x0ab60,0x096d5,0x092e0,0x0c960,0x0d954,0x0d4a0,0x0da50,0x07552,0x056a0,0x0abb7,0x025d0,0x092d0,0x0cab5,0x0a950,0x0b4a0,0x0baa4,0x0ad50,0x055d9,0x04ba0,0x0a5b0,0x15176,0x052b0,0x0a930,0x07954,0x06aa0,0x0ad50,0x05b52,0x04b60,0x0a6e6,0x0a4e0,0x0d260,0x0ea65,0x0d530,0x05aa0,0x076a3,0x096d0,0x04afb,0x04ad0,0x0a4d0,0x1d0b6,0x0d250,0x0d520,0x0dd45,0x0b5a0,0x056d0,0x055b2,0x049b0,0x0a577,0x0a4b0,0x0aa50,0x1b255,0x06d20,0x0ada0,0x14b63,0x09370,0x049f8,0x04970,0x064b0,0x168a6,0x0ea50,0x06b20,0x1a6c4,0x0aae0,0x092e0,0x0d2e3,0x0c960,0x0d557,0x0d4a0,0x0da50,0x05d55,0x056a0,0x0a6d0,0x055d4,0x052d0,0x0a9b8,0x0a950,0x0b4a0,0x0b6a6,0x0ad50,0x055a0,0x0aba4,0x0a5b0,0x052b0,0x0b273,0x06930,0x07337,0x06aa0,0x0ad50,0x14b55,0x04b60,0x0a570,0x054e4,0x0d160,0x0e968,0x0d520,0x0daa0,0x16aa6,0x056d0,0x04ae0,0x0a9d4,0x0a2d0,0x0d150,0x0f252,0x0d520],
@@ -137,20 +135,12 @@ export default async function(ctx) {
 
   const targetHolidays = [
     { name: "元旦", match: (m, d, l, nL) => m === 1 && d === 1 },
-    { name: "除夕", match: (m, d, l, nL) => nL.cn === "正月初一" },
     { name: "春节", match: (m, d, l, nL) => l.cn === "正月初一" },
-    { name: "元宵", match: (m, d, l, nL) => l.cn === "正月十五" },
-    { name: "妇女节", match: (m, d, l, nL) => m === 3 && d === 8 },
     { name: "清明", match: (m, d, l, nL) => l.term === "清明" },
     { name: "劳动", match: (m, d, l, nL) => m === 5 && d === 1 },
-    { name: "儿童", match: (m, d, l, nL) => m === 6 && d === 1 },
     { name: "端午", match: (m, d, l, nL) => l.cn === "五月初五" },
-    { name: "七夕", match: (m, d, l, nL) => l.cn === "七月初七" },
     { name: "中秋", match: (m, d, l, nL) => l.cn === "八月十五" },
-    { name: "国庆", match: (m, d, l, nL) => m === 10 && d === 1 },
-    { name: "重阳", match: (m, d, l, nL) => l.cn === "九月初九" },
-    { name: "腊八", match: (m, d, l, nL) => l.cn === "腊月初八" },
-    { name: "圣诞", match: (m, d, l, nL) => m === 12 && d === 25 }
+    { name: "国庆", match: (m, d, l, nL) => m === 10 && d === 1 }
   ];
 
   let upcomingHolidays = [];
@@ -158,16 +148,11 @@ export default async function(ctx) {
   
   for (let i = 1; i <= 365; i++) {
     let tempDate = new Date(todayMs + i * 86400000);
-    let nextDate = new Date(todayMs + (i + 1) * 86400000);
-    
     let ty = tempDate.getFullYear(), tm = tempDate.getMonth() + 1, td = tempDate.getDate();
-    let ny = nextDate.getFullYear(), nm = nextDate.getMonth() + 1, nd = nextDate.getDate();
-    
     let tl = Lunar.parse(ty, tm, td);
-    let nL = Lunar.parse(ny, nm, nd);
     
     for (let h of targetHolidays) {
-      if (!foundHolidays.has(h.name) && h.match(tm, td, tl, nL)) {
+      if (!foundHolidays.has(h.name) && h.match(tm, td, tl, tl)) {
         upcomingHolidays.push(`${h.name} ${i}天`);
         foundHolidays.add(h.name);
       }
@@ -180,63 +165,25 @@ export default async function(ctx) {
       finalHolidayText = `今日${todayHoliday} · 距 ${finalHolidayText}`;
   }
 
-  // 🛠️ 修复核心：按空格分割词组，保证词组不被拆行
-  const splitText = (str) => {
-    if (!str) return [];
-    let lines = [], currentLine = "", currentW = 0;
-    
-    // 正则匹配非空白字符，提取完整的词汇（如“谢土”作为一个整体）
-    const words = str.match(/\S+/g) || [];
-    
-    for (const word of words) {
-        let tw = 0; 
-        for(let i = 0; i < word.length; i++) tw += getCharWidth(word[i]);
-        
-        let spaceW = currentLine ? getCharWidth(' ') : 0;
-        
-        // 阈值调整为 54，防边缘溢出
-        if (currentW + tw + spaceW > 54) {
-            if (currentLine) lines.push(currentLine);
-            currentLine = word; 
-            currentW = tw;
-        } else {
-            currentLine += (currentLine ? " " : "") + word; 
-            currentW += tw + spaceW;
-        }
-    }
-    if (currentLine) lines.push(currentLine);
-    return lines;
-  };
-
-  const createRow = (icon, color, label, textStr, isFirst) => ({
+  // 🛠️ 核心修改：移除复杂的拆行逻辑，直接复用原生单行截断
+  const createRow = (icon, color, label, textStr) => ({
       type: 'stack', direction: 'row', alignItems: 'center', gap: 4, children: [
           { type: 'stack', direction: 'row', alignItems: 'center', gap: 2, children: [
-              { type: 'image', src: `sf-symbol:${icon}`, color: isFirst ? color : C.transparent, width: 13, height: 13 },
-              { type: 'text', text: label, font: { size: 12, weight: 'heavy' }, textColor: isFirst ? color : C.transparent }
+              { type: 'image', src: `sf-symbol:${icon}`, color: color, width: 13, height: 13 },
+              { type: 'text', text: label, font: { size: 12, weight: 'heavy' }, textColor: color }
           ]},
+          // 这里的 maxLines: 1 会让内容永远保持单行，超出宽度自动显示省略号（...）
           { type: 'text', text: textStr, font: { size: 12, weight: 'medium' }, textColor: C.sub, maxLines: 1, flex: 1 }
       ]
   });
 
   let gridRows = [];
-  if (rawYi) {
-      let lines = splitText(rawYi);
-      // 如果超过2行，把剩下的词组合并到第二行，利用系统原生截断(...)，美观且不会出错
-      if (lines.length > 2) lines = [lines[0], lines.slice(1).join(" ")];
-      lines.forEach((l, i) => gridRows.push(createRow("checkmark.circle.fill", C.yi, "宜", l, i === 0)));
-  }
-  if (rawJi) {
-      let lines = splitText(rawJi);
-      if (lines.length > 2) lines = [lines[0], lines.slice(1).join(" ")];
-      lines.forEach((l, i) => gridRows.push(createRow("xmark.circle.fill", C.ji, "忌", l, i === 0)));
-  }
-
-  const gridLen = gridRows.length;
-  const dynamicGap = gridLen <= 2 ? 9 : (gridLen === 3 ? 6 : 4);
+  if (rawYi) gridRows.push(createRow("checkmark.circle.fill", C.yi, "宜", rawYi));
+  if (rawJi) gridRows.push(createRow("xmark.circle.fill", C.ji, "忌", rawJi));
 
   return {
     type: 'widget', 
-    padding: [14, 16], // 🌟 统一边距
+    padding: [14, 16], 
     url: 'calshow://',
     backgroundColor: C.bg, 
     children: [
@@ -250,7 +197,7 @@ export default async function(ctx) {
           ]}
       ]},
       { type: 'spacer', length: 6 }, 
-      { type: 'stack', direction: 'column', alignItems: 'start', gap: dynamicGap, children: [
+      { type: 'stack', direction: 'column', alignItems: 'start', gap: 6, children: [
           { type: 'text', text: `${obj.gz}(${obj.ani})年 ${obj.cn} ${shichenStr}${obj.term ? ` · 今日${obj.term}` : ` · 当前${currentTerm}`}`, font: { size: 13, weight: 'bold' }, textColor: C.gold },
           ...gridRows,
           { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
