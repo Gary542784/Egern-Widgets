@@ -1,6 +1,6 @@
 /**
  * ==========================================
- * 📌 代码名称: 📅 日历 / 老黄历 (统一 UI 版)
+ * 📌 代码名称: 📅 日历 / 老黄历 (统一 UI 版 - 布局优化)
  * ==========================================
  */
 export default async function(ctx) {
@@ -180,20 +180,32 @@ export default async function(ctx) {
       finalHolidayText = `今日${todayHoliday} · 距 ${finalHolidayText}`;
   }
 
+  // 🛠️ 修复核心：按空格分割词组，保证词组不被拆行
   const splitText = (str) => {
     if (!str) return [];
     let lines = [], currentLine = "", currentW = 0;
-    const tokens = str.match(/[\d\/a-zA-Z\.\-]+|./gu) || [];
-    for (const token of tokens) {
-        let tw = 0; for(let i=0; i<token.length; i++) tw += getCharWidth(token[i]);
-        if (currentW + tw > 56) {
-            lines.push(currentLine); currentLine = token; currentW = tw;
+    
+    // 正则匹配非空白字符，提取完整的词汇（如“谢土”作为一个整体）
+    const words = str.match(/\S+/g) || [];
+    
+    for (const word of words) {
+        let tw = 0; 
+        for(let i = 0; i < word.length; i++) tw += getCharWidth(word[i]);
+        
+        let spaceW = currentLine ? getCharWidth(' ') : 0;
+        
+        // 阈值调整为 54，防边缘溢出
+        if (currentW + tw + spaceW > 54) {
+            if (currentLine) lines.push(currentLine);
+            currentLine = word; 
+            currentW = tw;
         } else {
-            currentLine += token; currentW += tw;
+            currentLine += (currentLine ? " " : "") + word; 
+            currentW += tw + spaceW;
         }
     }
     if (currentLine) lines.push(currentLine);
-    return lines.map(l => l.replace(/^[\s，。、]+|[\s，。、]+$/g, ''));
+    return lines;
   };
 
   const createRow = (icon, color, label, textStr, isFirst) => ({
@@ -209,6 +221,7 @@ export default async function(ctx) {
   let gridRows = [];
   if (rawYi) {
       let lines = splitText(rawYi);
+      // 如果超过2行，把剩下的词组合并到第二行，利用系统原生截断(...)，美观且不会出错
       if (lines.length > 2) lines = [lines[0], lines.slice(1).join(" ")];
       lines.forEach((l, i) => gridRows.push(createRow("checkmark.circle.fill", C.yi, "宜", l, i === 0)));
   }
