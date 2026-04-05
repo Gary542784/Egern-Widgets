@@ -1,0 +1,74 @@
+name: "综合面板小组件合集"
+description: "包含黄历、油价、网络信息、节点探针与加密货币的组件合集"
+
+# --- 环境变量配置区 (用于节点探针等模块的 UI 可视化填写) ---
+env_schema:
+  host:
+    name: 主机地址
+    description: SSH / 探针服务器地址
+    default_value: ""
+  port:
+    name: 端口
+    description: SSH / 探针端口号
+    default_value: "22"
+  username:
+    name: 用户名
+    description: SSH / 探针登录用户名
+    default_value: "root"
+  password:
+    name: 密码
+    description: "SSH / 探针密码（与私钥二选一）"
+    default_value: ""
+  privateKey:
+    name: 私钥
+    description: "SSH / 探针私钥（与密码二选一）"
+    default_value: ""
+
+# --- 脚本引入区 (保持你原来的 JS 直链不变) ---
+scriptings:
+  - generic:
+      # 1. 黄历信息模块 (用于展示传统黄历吉凶宜忌)
+      name: 黄历信息-HL
+      script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/HL.js
+      
+  - generic:
+      # 2. 今日油价模块
+      name: 今日油价-Youjia
+      script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Youjia.js
+      
+  - generic:
+      # 3. 网络高级信息模块
+      name: 网络高级-NetworkPro
+      script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Network-Pro.js
+      
+  - generic:
+      # 4. 节点探针模块
+      name: 节点探针-Probe
+      script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Probe.js
+      
+  - generic:
+      # 5. 加密货币模块
+      name: 加密货币-Crypto
+      script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Crypto.js
+
+# --- 面板展示区 ---
+widgets:
+  # --- 黄历面板 ---
+  - name: 黄历信息-HL
+    script_name: 黄历信息-HL
+    
+  # --- 油价面板 ---
+  - name: 今日油价-Youjia
+    script_name: 今日油价-Youjia
+    
+  # --- 高级网络面板 ---
+  - name: 网络高级-NetworkPro
+    script_name: 网络高级-NetworkPro
+    
+  # --- 节点探针面板 ---
+  - name: 节点探针-Probe
+    script_name: 节点探针-Probe
+    
+  # --- 加密货币面板 ---
+  - name: 加密货币-Crypto
+    script_name: 加密货币-Crypto
