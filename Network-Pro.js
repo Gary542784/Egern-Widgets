@@ -1,34 +1,25 @@
 /**
- * ==========================================
- * 📌 代码名称: 🌐 全功能网络看板 Pro (精简最终版)
- * 🛠️ 特性：BWH 两端对齐布局 + 百度/落地双延迟 (已移除打码)
- * ==========================================
+ * 📌 桌面小组件: 🛡️ 网络诊断雷达 (全栈解锁 Pro 版 - 终极美化版)
+ * 🍏 引入中轴分割线 | 极致对齐排版 | 百度/CF双延迟 | 影视 + AI 
  */
 export default async function(ctx) {
-  // 🎨 统一 UI 规范颜色
-  const BG_MAIN   = { light: '#FFFFFF', dark: '#121212' }; 
-  const C_TEXT    = { light: '#1C1C1E', dark: '#FFFFFF' }; 
-  const C_SUB     = { light: '#8E8E93', dark: '#8E8E93' }; 
-  const C_TITLE   = { light: '#1C1C1E', dark: '#FFFFFF' }; 
-  
-  const C_GREEN   = { light: '#34C759', dark: '#30D158' }; 
-  const C_BLUE    = { light: '#007AFF', dark: '#0A84FF' }; 
-  const C_PURPLE  = { light: '#5856D6', dark: '#5E5CE6' }; 
-  const C_ORANGE  = { light: '#FF9500', dark: '#FF9F0A' }; 
-  const C_RED     = { light: '#FF3B30', dark: '#FF453A' }; 
+  // 1. 全局系统动态色
+  const BG_COLORS = [{ light: '#FFFFFF', dark: '#1C1C1E' }, { light: '#FFFFFF', dark: '#1C1C1E' }];
+  const C_TITLE = { light: '#000000', dark: '#FFFFFF' };
+  const C_MAIN = { light: '#000000', dark: '#FFFFFF' };
+  const C_SUB = { light: '#8E8E93', dark: '#8E8E93' }; 
+  const C_DIVIDER = { light: 'rgba(0,0,0,0.1)', dark: 'rgba(255,255,255,0.15)' }; // 微弱的分割线颜色
 
-  const fmtLocalISP = (isp) => {
-    if (!isp) return "未知";
-    const s = String(isp).toLowerCase();
-    if (/移动|mobile|cmcc/i.test(s)) return "移动";
-    if (/电信|telecom|chinanet/i.test(s)) return "电信";
-    if (/联通|unicom/i.test(s)) return "联通";
-    if (/广电|broadcast|cbn/i.test(s)) return "广电";
-    return isp; 
-  };
+  const SYS_BLUE = { light: '#007AFF', dark: '#0A84FF' };
+  const SYS_PURPLE = { light: '#AF52DE', dark: '#BF5AF2' };
+  const SYS_GREEN = { light: '#34C759', dark: '#32D74B' };
+  const SYS_ORANGE = { light: '#FF9500', dark: '#FF9D0A' };
+  const SYS_YELLOW = { light: '#FFCC00', dark: '#FFD60A' }; 
+  const SYS_RED = { light: '#FF3B30', dark: '#FF453A' };
 
+  // --- 辅助与解析函数 ---
   const fmtProxyISP = (isp) => {
-    if (!isp) return "未知商家";
+    if (!isp) return "未知";
     let s = String(isp);
     if (/it7/i.test(s)) return "IT7 Network";
     if (/dmit/i.test(s)) return "DMIT Network";
@@ -36,11 +27,11 @@ export default async function(ctx) {
     if (/akamai/i.test(s)) return "Akamai";
     if (/amazon|aws/i.test(s)) return "AWS";
     if (/google/i.test(s)) return "Google Cloud";
-    if (/microsoft|azure/i.test(s)) return "Microsoft Azure";
+    if (/microsoft|azure/i.test(s)) return "Azure";
     if (/alibaba|aliyun/i.test(s)) return "阿里云";
     if (/tencent/i.test(s)) return "腾讯云";
     if (/oracle/i.test(s)) return "Oracle Cloud";
-    return s.length > 15 ? s.substring(0, 15) + "..." : s; 
+    return s.length > 11 ? s.substring(0, 11) + "..." : s; 
   };
 
   const getFlag = (code) => {
@@ -49,26 +40,8 @@ export default async function(ctx) {
     return String.fromCodePoint(...code.toUpperCase().split('').map(c => 127397 + c.charCodeAt()));
   };
 
-  const d = ctx.device || {};
-  const isWifi = !!d.wifi?.ssid;
-  let netName = "未连接", netIcon = "wifi";
-  
-  const netInfo = (typeof $network !== 'undefined') ? $network : (ctx.network || {});
-  let localIp = netInfo.v4?.primaryAddress || "—";
-  let gateway = netInfo.v4?.primaryRouter || "—";
-
-  if (isWifi) {
-    netName = d.wifi.ssid;
-  } else if (d.cellular?.radio) {
-    const radioMap = { "GPRS": "2.5G", "EDGE": "2.75G", "WCDMA": "3G", "LTE": "4G", "NR": "5G", "NRNSA": "5G" };
-    const rawRadio = d.cellular.radio.toUpperCase().replace(/\s+/g, "");
-    netName = radioMap[rawRadio] || rawRadio;
-    netIcon = "antenna.radiowaves.left.and.right";
-    gateway = "蜂窝内网";
-  }
-
-  const BASE_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1";
-  const commonHeaders = { "User-Agent": BASE_UA };
+  const BASE_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36";
+  const commonHeaders = { "User-Agent": BASE_UA, "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8" };
   const readBody = async (r) => {
     if (!r) return "";
     if (typeof r.body === "string" && r.body.length) return r.body;
@@ -78,221 +51,229 @@ export default async function(ctx) {
     return "";
   };
 
-  // 🚀 延迟测试模块：百度本地测试 vs 极速 204 落地测试
-  let baiduDelay = 0;
-  let proxyDelay = 0;
+  // 2. 获取本地网络数据
+  const d = ctx.device || {};
+  const isWifi = !!d.wifi?.ssid;
+  let netName = "未连接", netIcon = "antenna.radiowaves.left.and.right";
   
-  const startBaidu = Date.now();
-  const baiduTask = ctx.http.get("http://www.baidu.com", { timeout: 2000 })
-    .then(() => { baiduDelay = Date.now() - startBaidu; }).catch(() => {});
-    
-  const startProxy = Date.now();
-  const proxyTask = ctx.http.get("http://cp.cloudflare.com/generate_204", { timeout: 2000 })
-    .then(() => { proxyDelay = Date.now() - startProxy; }).catch(() => {});
+  const netInfo = (typeof $network !== 'undefined') ? $network : (ctx.network || {});
+  let localIp = netInfo.v4?.primaryAddress || d.ipv4?.address || "获取失败";
+  let gateway = netInfo.v4?.primaryRouter || d.ipv4?.gateway || "无网关";
 
-  async function checkNetflix(ctx) {
+  if (isWifi) { netName = d.wifi.ssid; netIcon = "wifi"; }
+  else if (d.cellular?.radio) {
+    const radioMap = { "GPRS": "2.5G", "EDGE": "2.75G", "WCDMA": "3G", "LTE": "4G", "NR": "5G", "NRNSA": "5G" };
+    netName = `${radioMap[d.cellular.radio.toUpperCase().replace(/\s+/g, "")] || d.cellular.radio}`;
+    gateway = "蜂窝内网";
+  }
+
+  // 3. 基础网络请求
+  const fetchLocal = async () => {
     try {
-      const fetchTitle = async (url) => {
-        const r = await ctx.http.get(url, { timeout: 6000, headers: commonHeaders, followRedirect: true }).catch(() => null);
-        return { body: await readBody(r) || "" };
+      const res = await ctx.http.get('https://myip.ipip.net/json', { headers: commonHeaders, timeout: 4000 });
+      const body = JSON.parse(await res.text());
+      if (body?.data?.ip) return { ip: body.data.ip, loc: `${body.data.location[1] || ""} ${body.data.location[2] || ""}`.trim() };
+    } catch (e) {}
+    return { ip: "获取失败", loc: "未知" };
+  };
+
+  const fetchProxy = async () => {
+    try {
+      const res = await ctx.http.get('http://ip-api.com/json/?lang=zh-CN', { timeout: 4000 });
+      const data = JSON.parse(await res.text());
+      const flag = getFlag(data.countryCode);
+      return { ip: data.query || "获取失败", loc: `${flag} ${data.city || data.country || ""}`.trim(), isp: fmtProxyISP(data.isp || data.org), cc: data.countryCode || "XX" };
+    } catch (e) { return { ip: "获取失败", loc: "未知", isp: "未知", cc: "XX" }; }
+  };
+
+  const fetchPurity = async () => {
+    try {
+      const res = await ctx.http.get('https://my.ippure.com/v1/info', { timeout: 4000 });
+      return JSON.parse(await res.text());
+    } catch (e) { return {}; }
+  };
+
+  const fetchLocalDelay = async () => {
+    const start = Date.now();
+    try { await ctx.http.get('http://www.baidu.com', { timeout: 2000 }); return `${Date.now() - start} ms`; } catch (e) { return "超时"; }
+  };
+
+  const fetchProxyDelay = async () => {
+    const start = Date.now();
+    try { await ctx.http.get('http://cp.cloudflare.com/generate_204', { timeout: 2000 }); return `${Date.now() - start} ms`; } catch (e) { return "超时"; }
+  };
+
+  // 🎬 流媒体解锁测试 
+  async function checkNetflix() {
+    try {
+      const checkStatus = async (id) => {
+        const r = await ctx.http.get(`https://www.netflix.com/title/${id}`, { timeout: 4000, headers: commonHeaders, followRedirect: false }).catch(() => null);
+        return r ? r.status : 0;
       };
-      const [t1, t2] = await Promise.all([ fetchTitle("https://www.netflix.com/title/81280792"), fetchTitle("https://www.netflix.com/title/70143836") ]);
-      if (!t1.body && !t2.body) return "❌";
-      let region = "XX";
-      for (const b of [t1.body, t2.body].filter(Boolean)) {
-        const m1 = b.match(/"countryCode"\s*:\s*"?([A-Z]{2})"?/);
-        if (m1?.[1]) { region = m1[1]; break; }
-      }
-      const oh1 = t1.body && /oh no!/i.test(t1.body);
-      const oh2 = t2.body && /oh no!/i.test(t2.body);
-      if (oh1 && oh2) return "🍿";
-      if (!oh1 || !oh2) return region.toUpperCase() || "XX";
-      return "❌";
+      const sFull = await checkStatus(70143836); 
+      const sOrig = await checkStatus(81280792); 
+      
+      if (sFull === 200) return "OK"; 
+      if (sOrig === 200) return "🍿"; 
+      return "❌"; 
     } catch { return "❌"; }
   }
 
-  async function checkTikTok(ctx) {
+  async function checkDisney() {
     try {
-      const fetchOnce = async (url) => {
-        const r = await ctx.http.get(url, { timeout: 5000, headers: commonHeaders, followRedirect: true }).catch(() => null);
-        return await readBody(r) || "";
-      };
-      let body = await fetchOnce("https://www.tiktok.com/");
-      if (body.includes("Please wait...")) body = await fetchOnce("https://www.tiktok.com/explore") || body;
-      const m = body.match(/"region"\s*:\s*"([A-Z]{2})"/);
-      return m?.[1] ? m[1] : (body ? "OK" : "❌");
+      const res = await ctx.http.get("https://www.disneyplus.com", { timeout: 4000, headers: commonHeaders, followRedirect: false }).catch(() => null);
+      if (!res || res.status === 403) return "❌";
+      const loc = res.headers?.location || res.headers?.Location || "";
+      if (loc.includes("unavailable")) return "❌";
+      return "OK"; 
     } catch { return "❌"; }
   }
 
-  async function checkGemini(ctx) {
+  async function checkTikTok() {
     try {
-      const res = await ctx.http.post('https://gemini.google.com/_/BardChatUi/data/batchexecute', {
-        timeout: 6000, headers: { ...commonHeaders, "Content-Type": "application/x-www-form-urlencoded" },
-        body: 'f.req=[["K4WWud","[[0],[\"en-US\"]]",null,"generic"]]', followRedirect: true
-      }).catch(() => null);
-      const txt = await readBody(res);
-      if (!txt) return "❌";
-      let m = txt.match(/"countryCode"\s*:\s*"([A-Z]{2})"/i);
+      const r = await ctx.http.get("https://www.tiktok.com/explore", { timeout: 4000, headers: commonHeaders, followRedirect: false }).catch(() => null);
+      if (!r || r.status === 403 || r.status === 401) return "❌";
+      const body = await readBody(r);
+      if (body.includes("Access Denied") || body.includes("Please wait...")) return "❌";
+      const m = body.match(/"region":"([A-Z]{2})"/i);
       return m?.[1] ? m[1].toUpperCase() : "OK";
     } catch { return "❌"; }
   }
 
-  async function checkChatGPT(ctx) {
+  // 🤖 AI 解锁测试
+  async function checkChatGPT() {
     try {
-      const headRes = await ctx.http.get("https://chatgpt.com", { timeout: 6000, headers: commonHeaders, followRedirect: false }).catch(() => null);
-      const webAccessible = !!headRes && !!(headRes?.headers?.location || headRes?.headers?.Location);
-      const iosRes = await ctx.http.get("https://ios.chat.openai.com", { timeout: 6000, headers: commonHeaders, followRedirect: true }).catch(() => null);
-      const iosBody = await readBody(iosRes);
-      const appBlocked = !iosBody || iosBody.includes("blocked") || iosBody.includes("unsupported");
-      const appAccessible = !!iosBody && !appBlocked;
+      const traceRes = await ctx.http.get("https://chatgpt.com/cdn-cgi/trace", { timeout: 3000 }).catch(() => null);
+      const tb = await readBody(traceRes);
+      const m = tb?.match(/loc=([A-Z]{2})/);
+      return m?.[1] ? m[1].toUpperCase() : "OK";
+    } catch { return "❌"; }
+  }
 
-      if (!webAccessible && !appAccessible) return "❌";
-      if (appAccessible && !webAccessible) return "APP";
-      if (webAccessible && appAccessible) {
-        const traceRes = await ctx.http.get("https://chatgpt.com/cdn-cgi/trace", { timeout: 5000, headers: commonHeaders, followRedirect: true }).catch(() => null);
-        const m = (await readBody(traceRes)).match(/loc=([A-Z]{2})/);
-        return m?.[1] || "XX";
-      }
+  async function checkClaude() {
+    try {
+      const res = await ctx.http.get("https://claude.ai/login", { 
+        timeout: 5000, 
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+        }
+      }).catch(() => null);
+      
+      if (!res) return "❌";
+      const status = res.status;
+      const body = await readBody(res);
+
+      if (body.includes("App unavailable") || body.includes("certain regions")) return "❌";
+      if (status === 403 && body.includes("1020")) return "❌";
+      if (status === 403 && (body.includes("cf-turnstile") || body.includes("Just a moment") || body.includes("Challenge"))) return "OK";
+      if (status === 200 || status === 301 || status === 302) return "OK";
+
       return "❌";
     } catch { return "❌"; }
   }
 
-  const unlockTasks = [
-    checkChatGPT(ctx).then(region => ({ name: "GPT", region })),
-    checkNetflix(ctx).then(region => ({ name: "NF", region })),
-    checkTikTok(ctx).then(region => ({ name: "TK", region })),
-    checkGemini(ctx).then(region => ({ name: "GMNI", region }))
-  ];
-
-  const networkInfoTasks = Promise.all([
-    ctx.http.get('https://myip.ipip.net/json', { headers: commonHeaders, timeout: 4000 }).catch(() => null),
-    ctx.http.get('http://ip-api.com/json/?lang=zh-CN', { timeout: 4000 }).catch(() => null),
-    ctx.http.get('https://my.ippure.com/v1/info', { timeout: 4000 }).catch(() => null)
-  ]);
-
-  const [netResults, unlockResults] = await Promise.all([
-    networkInfoTasks,
-    Promise.all(unlockTasks),
-    baiduTask, 
-    proxyTask
-  ]);
-
-  const [lResRaw, nResRaw, pureResRaw] = netResults;
-
-  let lIp = "—", lLoc = "—", lIsp = "—";
-  try {
-    if (lResRaw) {
-      const body = JSON.parse(await lResRaw.text());
-      lIp = body.data.ip || lIp;
-      const locArr = body.data.location || [];
-      lLoc = `中国${locArr[1] || ""}${locArr[2] || ""}`.trim();
-      lIsp = fmtLocalISP(locArr[4] || locArr[3]);
-    }
-  } catch (e) {}
-
-  let nIp = "—", nLoc = "—", asn = "—", nCountryCode = "XX", proxyProvider = "—";
-  try {
-    if (nResRaw) {
-      const nData = JSON.parse(await nResRaw.text());
-      nIp = nData.query || nIp;
-      nCountryCode = nData.countryCode || "XX";
-      nLoc = `${nData.country || ""} ${nData.city || ""}`.trim();
-      const asnMatch = nData.as ? nData.as.match(/(AS\d+)/) : null;
-      asn = asnMatch ? asnMatch[1] : "未知ASN";
-      proxyProvider = fmtProxyISP(nData.isp || nData.org);
-    }
-  } catch (e) {}
-
-  let pureData = {};
-  try { if (pureResRaw) pureData = JSON.parse(await pureResRaw.text()); } catch (e) {}
-  
-  let ipTypeStr = "代理网络";
-  if (pureData.isResidential === true) ipTypeStr = "家庭宽带";
-  else if (pureData.isResidential === false) ipTypeStr = "商业机房";
-
-  const risk = pureData.fraudScore;
-  let riskTxt = "获取超时", riskCol = C_SUB;
-  if (risk !== undefined) {
-    if (risk >= 80) { riskTxt = `极高危 (${risk})`; riskCol = C_RED; }
-    else if (risk >= 70) { riskTxt = `高危 (${risk})`; riskCol = C_ORANGE; }
-    else if (risk >= 35) { riskTxt = `中危 (${risk})`; riskCol = C_ORANGE; } 
-    else { riskTxt = `低危 (${risk})`; riskCol = C_GREEN; }
+  async function checkGemini() {
+    try {
+      const res = await ctx.http.get("https://gemini.google.com/app", { timeout: 4000, headers: commonHeaders, followRedirect: false }).catch(() => null);
+      if (!res) return "❌";
+      const loc = res.headers?.location || res.headers?.Location || "";
+      if (loc.includes("faq")) return "❌";
+      return "OK";
+    } catch { return "❌"; }
   }
 
-  const unlockText = unlockResults.map(r => {
-    if (r.region === "❌") return `${r.name}:🚫`;
-    if (r.region === "🍿") return `${r.name}:🍿`;
-    if (r.region === "APP") return `${r.name}:📱`; 
-    const finalReg = (r.region && r.region !== "OK" && r.region !== "XX") ? r.region : nCountryCode;
-    return `${r.name}:${getFlag(finalReg)}`;
-  }).join(" ");
+  // 🚦 并发执行所有核心网络请求
+  const [localData, proxyData, purityData, localDelay, proxyDelay, rNF, rDP, rTK, rGPT, rCL, rGM] = await Promise.all([
+    fetchLocal(), fetchProxy(), fetchPurity(), fetchLocalDelay(), fetchProxyDelay(),
+    checkNetflix(), checkDisney(), checkTikTok(), 
+    checkChatGPT(), checkClaude(), checkGemini()
+  ]);
 
-  const getDelayCol = (ms) => {
-    if (ms <= 0) return C_SUB;
-    if (ms < 150) return C_GREEN;
-    if (ms <= 350) return C_ORANGE;
-    return C_RED;
+  // 4. 数据清洗与渲染逻辑
+  const isRes = purityData.isResidential;
+  let nativeText = "未知属性", nativeIc = "questionmark.building.fill", nativeCol = C_SUB;
+  if (isRes === true) { nativeText = "原生住宅"; nativeIc = "house.fill"; nativeCol = SYS_GREEN; } 
+  else if (isRes === false) { nativeText = "商业机房"; nativeIc = "building.2.fill"; nativeCol = SYS_ORANGE; }
+
+  const risk = purityData.fraudScore;
+  let riskTxt = "无数据", riskCol = C_SUB, riskIc = "questionmark.circle.fill";
+  if (risk !== undefined) {
+    if (risk >= 70) { riskTxt = `高危 (${risk})`; riskCol = SYS_RED; riskIc = "xmark.shield.fill"; } 
+    else if (risk >= 30) { riskTxt = `中危 (${risk})`; riskCol = SYS_YELLOW; riskIc = "exclamationmark.triangle.fill"; } 
+    else { riskTxt = `纯净 (${risk})`; riskCol = SYS_GREEN; riskIc = "checkmark.shield.fill"; }
+  }
+
+  // 解锁状态格式化 (去除冒号，显得更清爽干净)
+  const fmtUnlock = (name, res, cc) => {
+    let flag = "🚫";
+    if (res === "🍿" || res === "APP") flag = res;
+    else if (res !== "❌") flag = getFlag(res === "OK" || res === "XX" ? cc : res);
+    return `${name} ${flag}`; // 去除冗余的冒号
   };
-  const bdCol = getDelayCol(baiduDelay);
-  const pxCol = getDelayCol(proxyDelay);
+  
+  // 各自加大间距
+  const textVideo = `${fmtUnlock('NF', rNF, proxyData.cc)}   ${fmtUnlock('DP', rDP, proxyData.cc)}   ${fmtUnlock('TK', rTK, proxyData.cc)}`;
+  const textAI = `${fmtUnlock('GPT', rGPT, proxyData.cc)}   ${fmtUnlock('CL', rCL, proxyData.cc)}   ${fmtUnlock('GM', rGM, proxyData.cc)}`;
 
-  const headerTitle = lIsp !== "未知" ? `${lIsp} · ${netName}` : netName;
-  const dNow = new Date();
-  const timeStr = `${String(dNow.getHours()).padStart(2, '0')}:${String(dNow.getMinutes()).padStart(2, '0')}:${String(dNow.getSeconds()).padStart(2, '0')}`;
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const TIME_COL = { light: 'rgba(0,0,0,0.3)', dark: 'rgba(255,255,255,0.3)' };
 
-  const Row = (ic, labelCol, label, val) => ({
-    type: 'stack', direction: 'row', alignItems: 'center', 
+  // 5. 网格行组件 (微调字重，让主次更加分明)
+  const Row = (ic, icCol, label, val, valCol) => ({
+    type: 'stack', direction: 'row', alignItems: 'center', gap: 5,
     children: [
-      { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
-        { type: 'image', src: `sf-symbol:${ic}`, color: labelCol, width: 13, height: 13 },
-        { type: 'text', text: label, font: { size: 12, weight: 'bold' }, textColor: C_TITLE }
-      ]},
+      { type: 'image', src: `sf-symbol:${ic}`, color: icCol, width: 11, height: 11 },
+      { type: 'text', text: label, font: { size: 10, weight: 'regular' }, textColor: C_SUB, maxLines: 1 }, 
       { type: 'spacer' },
-      { type: 'text', text: val.trim(), font: { size: 11, weight: 'medium' }, textColor: C_SUB, align: 'right', maxLines: 1 }
+      { type: 'text', text: val, font: { size: 10, weight: 'medium' }, textColor: valCol, maxLines: 1, minScale: 0.4 }
     ]
   });
 
+  // 6. 最终渲染: 带有中轴线的极致对称布局
   return {
-    type: 'widget', 
-    padding: [16, 16], 
-    backgroundColor: BG_MAIN, 
-    refreshPolicy: { onNetworkChange: true, onEnter: true, timeout: 10 },
+    type: 'widget', padding: 14,
+    backgroundGradient: { type: 'linear', colors: BG_COLORS, startPoint: { x: 0, y: 0 }, endPoint: { x: 1, y: 1 } },
     children: [
-      // --- 头部 --- 
-      { type: 'stack', direction: 'row', alignItems: 'center', children: [
-          { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
-            { type: 'image', src: `sf-symbol:${netIcon}`, color: C_TITLE, width: 15, height: 15 },
-            { type: 'text', text: headerTitle, font: { size: 14, weight: 'heavy' }, textColor: C_TITLE }
-          ]},
+      // 顶部 Header
+      { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
+          { type: 'image', src: 'sf-symbol:waveform.path.ecg', color: C_TITLE, width: 16, height: 16 },
+          { type: 'text', text: '网络诊断雷达', font: { size: 14, weight: 'bold' }, textColor: C_TITLE },
           { type: 'spacer' },
-          { type: 'stack', direction: 'row', alignItems: 'center', gap: 4, children: [
-             { type: 'text', text: '百度', font: { size: 9, weight: 'bold' }, textColor: C_SUB },
-             { type: 'text', text: baiduDelay > 0 ? `${baiduDelay}ms` : '超时', font: { size: 11, weight: 'bold' }, textColor: bdCol },
-             { type: 'text', text: '|', font: { size: 10 }, textColor: C_SUB },
-             { type: 'text', text: '落地', font: { size: 9, weight: 'bold' }, textColor: C_SUB },
-             { type: 'text', text: proxyDelay > 0 ? `${proxyDelay}ms` : '超时', font: { size: 11, weight: 'bold' }, textColor: pxCol }
+          { type: 'text', text: timeStr, font: { size: 10, weight: 'medium' }, textColor: TIME_COL }
+      ]},
+      { type: 'spacer', length: 12 }, // 加大 Header 和主体的距离
+      
+      // 双列网格 (引入 3 列 Stack：左侧列、中轴线、右侧列)
+      { type: 'stack', direction: 'row', gap: 10, children: [
+          
+          // 【左列】：本地与影视
+          { type: 'stack', direction: 'column', gap: 4.5, flex: 1, children: [
+              Row(netIcon, SYS_BLUE, "环境", netName, C_MAIN),
+              Row("wifi.router.fill", SYS_BLUE, "网关", gateway, C_MAIN),
+              Row("iphone", SYS_BLUE, "内网", localIp, C_MAIN),
+              Row("globe.asia.australia.fill", SYS_BLUE, "公网", localData.ip, C_MAIN),
+              Row("map.fill", SYS_BLUE, "位置", localData.loc, C_MAIN),
+              Row("timer", SYS_BLUE, "延迟", localDelay, C_MAIN), 
+              Row("play.tv.fill", SYS_BLUE, "影视", textVideo, C_MAIN) 
+          ]},
+
+          // ✂️ 【中轴线】：阻断左右视觉粘连
+          { type: 'stack', width: 0.5, backgroundColor: C_DIVIDER },
+          
+          // 【右列】：代理与 AI
+          { type: 'stack', direction: 'column', gap: 4.5, flex: 1, children: [
+              Row("paperplane.fill", SYS_PURPLE, "出口", proxyData.ip, C_MAIN),
+              Row("mappin.and.ellipse", SYS_PURPLE, "落地", proxyData.loc, C_MAIN),
+              Row("server.rack", SYS_PURPLE, "厂商", proxyData.isp, C_MAIN),
+              Row(nativeIc, nativeCol, "属性", nativeText, C_MAIN), 
+              Row(riskIc, riskCol, "纯净", riskTxt, riskCol),
+              Row("timer", SYS_PURPLE, "延迟", proxyDelay, C_MAIN), 
+              Row("cpu", SYS_PURPLE, "AI", textAI, C_MAIN) 
           ]}
       ]},
-      
-      { type: 'spacer' }, 
-      
-      // --- 主体数据内容 --- 
-      { type: 'stack', direction: 'column', gap: 8, children: [ 
-          Row("house.fill", C_GREEN, "内网", `${localIp} / ${gateway}`),
-          Row("paperplane.fill", C_BLUE, "本地", `${lIp} / ${lLoc}`),
-          Row("globe", C_PURPLE, "落地", `${nIp} / ${getFlag(nCountryCode)} ${nLoc}`),
-          Row("shield.lefthalf.filled", riskCol, "属性", `${proxyProvider} / ${ipTypeStr} / ${riskTxt}`),
-          Row("play.tv.fill", C_ORANGE, "解锁", `${unlockText}`) 
-      ]},
-      
-      { type: 'spacer' },
-      
-      // --- 底部时间 ---
-      { type: 'stack', direction: 'row', alignItems: 'center', children: [
-          { type: 'image', src: 'sf-symbol:arrow.triangle.2.circlepath', color: C_SUB, width: 9, height: 9 },
-          { type: 'text', text: ` 刷新于 ${timeStr}`, font: { size: 10, weight: 'medium' }, textColor: C_SUB },
-          { type: 'spacer' }
-      ]}
+      { type: 'spacer' }
     ]
   };
 }
