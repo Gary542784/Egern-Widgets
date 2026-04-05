@@ -5,7 +5,8 @@
  */
 export default async function (ctx) {
   try {
-    const regionParam = ctx.env.GAS_REGION || ctx.env.region || "sichuan/chengdu"; 
+    // 🌟 环境变量读取：优先读取 YAML 配置中的 GAS_REGION
+    const regionParam = ctx.env.GAS_REGION || "sichuan/chengdu"; 
     const SHOW_TREND = (ctx.env.SHOW_TREND || "true").trim() !== "false";
 
     // 🎨 统一 UI 规范颜色
@@ -20,13 +21,14 @@ export default async function (ctx) {
     const COLOR_BLUE = { light: '#3A5F85', dark: '#5E8EB8' };  
     const COLOR_TEAL = { light: '#628C7B', dark: '#73A491' };  
 
+    // 📅 2026 年调价日历
     const CALENDAR_2026 = [
       {m: 1, d: 12}, {m: 1, d: 23}, {m: 2, d: 9},  {m: 2, d: 23}, {m: 3, d: 9},  {m: 3, d: 23}, {m: 4, d: 7},  {m: 4, d: 21}, 
       {m: 5, d: 8},  {m: 5, d: 22}, {m: 6, d: 5},  {m: 6, d: 19}, {m: 7, d: 3},  {m: 7, d: 17}, {m: 7, d: 31}, {m: 8, d: 14}, 
       {m: 8, d: 28}, {m: 9, d: 11}, {m: 9, d: 25}, {m: 10, d: 14}, {m: 10, d: 28}, {m: 11, d: 11}, {m: 11, d: 25}, {m: 12, d: 9}, {m: 12, d: 23}
     ];
 
-    const now = new Date();
+    const now = new Date(Date.now() + (new Date().getTimezoneOffset() + 480) * 60000);
     const updateTimeStr = `${String(now.getMonth() + 1).padStart(2, "0")}.${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
     const getNextAdjust = () => {
@@ -70,20 +72,20 @@ export default async function (ctx) {
       if (SHOW_TREND) {
         const trendMatch = html.match(/<div class="tishi">[\s\S]*?<span>([^<]+)<\/span>[\s\S]*?<br\/>([\s\S]+?)<br\/>/);
         if (trendMatch) {
-          const timeText = trendMatch[1];
           const priceText = trendMatch[2];
-          let rawDateMatch = timeText.match(/(\d{1,2})月(\d{1,2})日(\d{1,2})时/);
-          let adjustDate = rawDateMatch ? `${String(rawDateMatch[1]).padStart(2, "0")}.${String(rawDateMatch[2]).padStart(2, "0")} ${rawDateMatch[3]}:00` : "未知时间";
+          let adjustDate = "近期";
           const isUp = priceText.includes("上调");
           const isDown = priceText.includes("下调");
           const trendIcon = isUp ? "↑" : (isDown ? "↓" : "-");
           trendColor = isUp ? COLOR_RED : (isDown ? COLOR_TEAL : TEXT_MUTED);
           const allPrices = priceText.match(/[\d\.]+\s*元\/升/g);
-          let amount = allPrices && allPrices.length > 0 ? (allPrices.length >= 2 ? `${allPrices[0].match(/[\d\.]+/)[0]}-${allPrices[1].match(/[\d\.]+/)[0]}¥/L` : `${allPrices[0].match(/[\d\.]+/)[0]}¥/L`) : "";
-          trendInfo = `${adjustDate}, ${trendIcon} ${amount}`.trim();
+          let amount = allPrices && allPrices.length > 0 ? (allPrices.length >= 2 ? `${allPrices[0].match(/[\d\.]+/)[0]}-${allPrices[1].match(/[\d\.]+/)[0]}` : `${allPrices[0].match(/[\d\.]+/)[0]}`) : "";
+          trendInfo = `${trendIcon} ${amount}元/升`.trim();
         }
       }
-    } catch (e) {}
+    } catch (e) {
+        trendInfo = "获取失败";
+    }
 
     const priceItems = [
       { label: "92号", val: prices.p92, color: COLOR_GOLD },
@@ -94,22 +96,21 @@ export default async function (ctx) {
 
     return {
       type: "widget", 
-      padding: [14, 16], // 🌟 统一边距
+      padding: [14, 16],
       url: "hellobike://",
       backgroundColor: BG_MAIN, 
       children: [
         { type: "stack", direction: "row", alignItems: "center", children: [
             { type: "stack", direction: "row", alignItems: "center", gap: 6, children: [
                 { type: "image", src: "sf-symbol:fuelpump.circle.fill", width: 16, height: 16, color: TEXT_MAIN },
-                { type: "text", text: `${regionName || "成都"}油价`, font: { size: 15, weight: "heavy" }, textColor: TEXT_MAIN }
+                { type: "text", text: `${regionName || "查询中"}油价`, font: { size: 15, weight: "heavy" }, textColor: TEXT_MAIN }
             ]},
             { type: "spacer" }, 
             { type: "stack", direction: "row", alignItems: "center", children: [
                 { type: "text", text: "下轮调价: ", font: { size: 11, weight: "medium" }, textColor: infoColor },
-                { type: "text", text: nextAdjust.dateStr, font: { size: 11, weight: "bold" }, textColor: infoColor },
+                { type: "text", text: nextAdjust.dateStr.split(' ')[0], font: { size: 11, weight: "bold" }, textColor: infoColor },
                 ...(nextAdjust.hasCountdown ? [
-                    { type: "text", text: ` (${nextAdjust.days}d${nextAdjust.hours}h `, font: { size: 11, weight: "bold" }, textColor: infoColor },
-                    { type: "text", text: "后)", font: { size: 11, weight: "medium" }, textColor: infoColor }
+                    { type: "text", text: ` (${nextAdjust.days}d${nextAdjust.hours}h)`, font: { size: 11, weight: "bold" }, textColor: infoColor }
                 ] : [])
             ]}
         ]},
@@ -131,16 +132,15 @@ export default async function (ctx) {
           children: [
             { type: "stack", direction: "row", alignItems: "center", gap: 4, children: [
                 { type: "image", src: "sf-symbol:arrow.triangle.2.circlepath", width: 11, height: 11, color: TEXT_MUTED },
-                { type: "text", text: updateTimeStr, font: { size: 11, weight: 'bold' }, textColor: TEXT_MUTED }
+                { type: "text", text: updateTimeStr, font: { size: 10, weight: 'bold' }, textColor: TEXT_MUTED }
             ]},
             { type: "spacer" },
             { type: "stack", direction: "row", alignItems: "center", gap: 2, children: [
-                { type: "text", text: "本轮调价: ", font: { size: 11, weight: 'medium' }, textColor: TEXT_MUTED },
-                { type: "text", text: trendInfo, font: { size: 11, weight: "bold" }, textColor: trendColor, lineLimit: 1, minScale: 0.7 }
+                { type: "text", text: "趋势预估: ", font: { size: 10, weight: 'medium' }, textColor: TEXT_MUTED },
+                { type: "text", text: trendInfo, font: { size: 10, weight: "bold" }, textColor: trendColor, lineLimit: 1, minScale: 0.7 }
             ]}
           ]
-        },
-        { type: 'spacer' }
+        }
       ]
     };
   } catch (err) {
@@ -148,9 +148,8 @@ export default async function (ctx) {
       type: 'widget', padding: [14, 16],
       backgroundColor: { light: '#FFFFFF', dark: '#121212' }, 
       children: [
-        { type: 'text', text: '油价组件出现异常 ⚠️', font: { size: 14, weight: 'heavy' }, textColor: '#FF453A' },
-        { type: 'spacer', length: 4 },
-        { type: 'text', text: String(err.message || err), font: { size: 12 }, textColor: '#FF453A', maxLines: 5 }
+        { type: 'text', text: '油价异常', font: { size: 14, weight: 'heavy' }, textColor: '#FF453A' },
+        { type: 'text', text: String(err), font: { size: 10 }, textColor: '#FF453A' }
       ]
     };
   }
