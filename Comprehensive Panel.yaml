@@ -1,82 +1,85 @@
 name: "综合面板小组件合集"
-description: "包含黄历、油价、网络信息、节点探针与加密货币的组件合集"
+description: "包含黄历、油价、网络信息、服务器监控与加密货币的组件合集"
 
-# --- 环境变量配置区 (用于节点探针等模块的 UI 可视化填写) ---
+# --- 环境变量配置区 (已严格匹配新版 Server Monitor 的变量命名) ---
 env_schema:
-  veid:
-    name: 搬瓦工 VEID
-    description: 填写搬瓦工的 VEID
-    default_value: ""
-  apikey:
-    name: 搬瓦工 API Key
-    description: 填写搬瓦工的 API Key
-    default_value: ""
-  host:
+  WIDGET_NAME:
+    name: 节点名称
+    description: 探针显示的节点名称
+    default_value: "My Node"
+  SERVER_HOST:
     name: 主机地址
-    description: SSH / 探针服务器地址
+    description: SSH / 探针服务器地址 (必填)
     default_value: ""
-  port:
+  SERVER_PORT:
     name: 端口
-    description: SSH / 探针端口号
+    description: SSH 端口号
     default_value: "22"
-  username:
+  SERVER_USER:
     name: 用户名
-    description: SSH / 探针登录用户名
+    description: SSH 登录用户名
     default_value: "root"
-  password:
+  SERVER_PASSWORD:
     name: 密码
-    description: "SSH / 探针密码（与私钥二选一）"
+    description: SSH 密码（与私钥二选一）
     default_value: ""
-  privateKey:
+  SERVER_KEY:
     name: 私钥
-    description: "SSH / 探针私钥（与密码二选一）"
+    description: SSH 私钥（与密码二选一）
     default_value: ""
+  BWH_VEID:
+    name: 搬瓦工 VEID
+    description: 填写搬瓦工的 VEID (选填)
+    default_value: ""
+  BWH_API_KEY:
+    name: 搬瓦工 API Key
+    description: 填写搬瓦工的 API Key (选填)
+    default_value: ""
+  TRAFFIC_LIMIT:
+    name: 流量限制 (GB)
+    description: 每月流量上限
+    default_value: "2000"
+  RESET_DAY:
+    name: 流量重置日
+    description: 每月几号重置流量
+    default_value: "1"
 
-# --- 脚本引入区 (保持原来的 JS 直链不变) ---
+# --- 脚本引入区 ---
 scriptings:
   - generic:
-      # 1. 黄历信息模块
       name: 黄历信息-HL
       script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/HL.js
       
   - generic:
-      # 2. 今日油价模块
       name: 今日油价-Youjia
       script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Youjia.js
       
   - generic:
-      # 3. 网络高级信息模块
       name: 网络高级-NetworkPro
       script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Network-Pro.js
       
   - generic:
-      # 4. 节点探针模块 (搬瓦工等)
-      name: 节点探针-Probe
+      # 注意：确保你发我的这段最新代码已经更新到了这个 Probe.js 链接中
+      name: 节点探针-Monitor
       script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Probe.js
       
   - generic:
-      # 5. 加密货币模块
       name: 加密货币-Crypto
       script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Crypto.js
 
 # --- 面板展示区 ---
 widgets:
-  # --- 黄历面板 ---
   - name: 黄历信息-HL
     script_name: 黄历信息-HL
     
-  # --- 油价面板 ---
   - name: 今日油价-Youjia
     script_name: 今日油价-Youjia
     
-  # --- 高级网络面板 ---
   - name: 网络高级-NetworkPro
     script_name: 网络高级-NetworkPro
     
-  # --- 节点探针面板 ---
-  - name: 节点探针-Probe
-    script_name: 节点探针-Probe
+  - name: 节点探针-Monitor
+    script_name: 节点探针-Monitor
     
-  # --- 加密货币面板 ---
   - name: 加密货币-Crypto
     script_name: 加密货币-Crypto
