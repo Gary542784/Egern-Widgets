@@ -3,6 +3,14 @@ description: "包含黄历、油价、网络信息、节点探针与加密货币
 
 # --- 环境变量配置区 (用于节点探针等模块的 UI 可视化填写) ---
 env_schema:
+  veid:
+    name: 搬瓦工 VEID
+    description: 填写搬瓦工的 VEID
+    default_value: ""
+  apikey:
+    name: 搬瓦工 API Key
+    description: 填写搬瓦工的 API Key
+    default_value: ""
   host:
     name: 主机地址
     description: SSH / 探针服务器地址
@@ -24,10 +32,10 @@ env_schema:
     description: "SSH / 探针私钥（与密码二选一）"
     default_value: ""
 
-# --- 脚本引入区 (保持你原来的 JS 直链不变) ---
+# --- 脚本引入区 (保持原来的 JS 直链不变) ---
 scriptings:
   - generic:
-      # 1. 黄历信息模块 (用于展示传统黄历吉凶宜忌)
+      # 1. 黄历信息模块
       name: 黄历信息-HL
       script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/HL.js
       
@@ -42,7 +50,7 @@ scriptings:
       script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Network-Pro.js
       
   - generic:
-      # 4. 节点探针模块
+      # 4. 节点探针模块 (搬瓦工等)
       name: 节点探针-Probe
       script_url: https://raw.githubusercontent.com/xcgtb/Egern-Widgets/main/Probe.js
       
