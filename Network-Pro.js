@@ -1,21 +1,25 @@
 /**
  * 📌 桌面小组件: 🛡️ 网络诊断雷达 (全栈解锁 Pro 版 - 终极美化版)
- * 🍏 引入中轴分割线 | 极致对齐排版 | 百度/CF双延迟 | 影视 + AI 
+ * 🎨 采用全新 System UI 规范色系 | 纯色背景解决暗黑圆角
  */
 export default async function(ctx) {
-  // 1. 全局系统动态色
-  const BG_COLORS = [{ light: '#FFFFFF', dark: '#1C1C1E' }, { light: '#FFFFFF', dark: '#1C1C1E' }];
-  const C_TITLE = { light: '#000000', dark: '#FFFFFF' };
-  const C_MAIN = { light: '#000000', dark: '#FFFFFF' };
-  const C_SUB = { light: '#8E8E93', dark: '#8E8E93' }; 
-  const C_DIVIDER = { light: 'rgba(0,0,0,0.1)', dark: 'rgba(255,255,255,0.15)' }; // 微弱的分割线颜色
-
-  const SYS_BLUE = { light: '#007AFF', dark: '#0A84FF' };
-  const SYS_PURPLE = { light: '#AF52DE', dark: '#BF5AF2' };
-  const SYS_GREEN = { light: '#34C759', dark: '#32D74B' };
-  const SYS_ORANGE = { light: '#FF9500', dark: '#FF9D0A' };
-  const SYS_YELLOW = { light: '#FFCC00', dark: '#FFD60A' }; 
-  const SYS_RED = { light: '#FF3B30', dark: '#FF453A' };
+  // 1. 统一 UI 规范颜色 (全局 C 对象)
+  const C = {
+    bg: { light: '#FFFFFF', dark: '#121212' },       
+    barBg: { light: '#0000001A', dark: '#FFFFFF22' },
+    text: { light: '#1C1C1E', dark: '#FFFFFF' },     
+    dim: { light: '#8E8E93', dark: '#8E8E93' },      
+    
+    cpu: { light: '#007AFF', dark: '#0A84FF' },      // 用于左侧本地列
+    mem: { light: '#AF52DE', dark: '#BF5AF2' },      // 用于右侧代理列
+    disk: { light: '#FF9500', dark: '#FF9F0A' },     // 用于中危/机房
+    netRx: { light: '#34C759', dark: '#30D158' },    // 用于纯净/原生住宅
+    netTx: { light: '#5856D6', dark: '#5E5CE6' },    
+    
+    // 补充：用于网络雷达极危状态的衍生色
+    yellow: { light: '#FFCC00', dark: '#FFD60A' },
+    red: { light: '#FF3B30', dark: '#FF453A' }
+  };
 
   // --- 辅助与解析函数 ---
   const fmtProxyISP = (isp) => {
@@ -112,7 +116,6 @@ export default async function(ctx) {
       };
       const sFull = await checkStatus(70143836); 
       const sOrig = await checkStatus(81280792); 
-      
       if (sFull === 200) return "OK"; 
       if (sOrig === 200) return "🍿"; 
       return "❌"; 
@@ -159,16 +162,13 @@ export default async function(ctx) {
           "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
         }
       }).catch(() => null);
-      
       if (!res) return "❌";
       const status = res.status;
       const body = await readBody(res);
-
       if (body.includes("App unavailable") || body.includes("certain regions")) return "❌";
       if (status === 403 && body.includes("1020")) return "❌";
       if (status === 403 && (body.includes("cf-turnstile") || body.includes("Just a moment") || body.includes("Challenge"))) return "OK";
       if (status === 200 || status === 301 || status === 302) return "OK";
-
       return "❌";
     } catch { return "❌"; }
   }
@@ -192,27 +192,25 @@ export default async function(ctx) {
 
   // 4. 数据清洗与渲染逻辑
   const isRes = purityData.isResidential;
-  let nativeText = "未知属性", nativeIc = "questionmark.building.fill", nativeCol = C_SUB;
-  if (isRes === true) { nativeText = "原生住宅"; nativeIc = "house.fill"; nativeCol = SYS_GREEN; } 
-  else if (isRes === false) { nativeText = "商业机房"; nativeIc = "building.2.fill"; nativeCol = SYS_ORANGE; }
+  let nativeText = "未知属性", nativeIc = "questionmark.building.fill", nativeCol = C.dim;
+  if (isRes === true) { nativeText = "原生住宅"; nativeIc = "house.fill"; nativeCol = C.netRx; } 
+  else if (isRes === false) { nativeText = "商业机房"; nativeIc = "building.2.fill"; nativeCol = C.disk; }
 
   const risk = purityData.fraudScore;
-  let riskTxt = "无数据", riskCol = C_SUB, riskIc = "questionmark.circle.fill";
+  let riskTxt = "无数据", riskCol = C.dim, riskIc = "questionmark.circle.fill";
   if (risk !== undefined) {
-    if (risk >= 70) { riskTxt = `高危 (${risk})`; riskCol = SYS_RED; riskIc = "xmark.shield.fill"; } 
-    else if (risk >= 30) { riskTxt = `中危 (${risk})`; riskCol = SYS_YELLOW; riskIc = "exclamationmark.triangle.fill"; } 
-    else { riskTxt = `纯净 (${risk})`; riskCol = SYS_GREEN; riskIc = "checkmark.shield.fill"; }
+    if (risk >= 70) { riskTxt = `高危 (${risk})`; riskCol = C.red; riskIc = "xmark.shield.fill"; } 
+    else if (risk >= 30) { riskTxt = `中危 (${risk})`; riskCol = C.disk; riskIc = "exclamationmark.triangle.fill"; } 
+    else { riskTxt = `纯净 (${risk})`; riskCol = C.netRx; riskIc = "checkmark.shield.fill"; }
   }
 
-  // 解锁状态格式化 (去除冒号，显得更清爽干净)
   const fmtUnlock = (name, res, cc) => {
     let flag = "🚫";
     if (res === "🍿" || res === "APP") flag = res;
     else if (res !== "❌") flag = getFlag(res === "OK" || res === "XX" ? cc : res);
-    return `${name} ${flag}`; // 去除冗余的冒号
+    return `${name} ${flag}`; 
   };
   
-  // 各自加大间距
   const textVideo = `${fmtUnlock('NF', rNF, proxyData.cc)}   ${fmtUnlock('DP', rDP, proxyData.cc)}   ${fmtUnlock('TK', rTK, proxyData.cc)}`;
   const textAI = `${fmtUnlock('GPT', rGPT, proxyData.cc)}   ${fmtUnlock('CL', rCL, proxyData.cc)}   ${fmtUnlock('GM', rGM, proxyData.cc)}`;
 
@@ -220,57 +218,58 @@ export default async function(ctx) {
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const TIME_COL = { light: 'rgba(0,0,0,0.3)', dark: 'rgba(255,255,255,0.3)' };
 
-  // 5. 网格行组件 (微调字重，让主次更加分明)
+  // 5. 网格行组件 (采用 C.dim 和 C.text)
   const Row = (ic, icCol, label, val, valCol) => ({
     type: 'stack', direction: 'row', alignItems: 'center', gap: 5,
     children: [
       { type: 'image', src: `sf-symbol:${ic}`, color: icCol, width: 11, height: 11 },
-      { type: 'text', text: label, font: { size: 10, weight: 'regular' }, textColor: C_SUB, maxLines: 1 }, 
+      { type: 'text', text: label, font: { size: 10, weight: 'regular' }, textColor: C.dim, maxLines: 1 }, 
       { type: 'spacer' },
       { type: 'text', text: val, font: { size: 10, weight: 'medium' }, textColor: valCol, maxLines: 1, minScale: 0.4 }
     ]
   });
 
-  // 6. 最终渲染: 带有中轴线的极致对称布局
+  // 6. 最终渲染
   return {
-    type: 'widget', padding: 14,
-    backgroundGradient: { type: 'linear', colors: BG_COLORS, startPoint: { x: 0, y: 0 }, endPoint: { x: 1, y: 1 } },
+    type: 'widget', 
+    padding: 14,
+    backgroundColor: C.bg, // 完美融合暗黑圆角
     children: [
       // 顶部 Header
       { type: 'stack', direction: 'row', alignItems: 'center', gap: 6, children: [
-          { type: 'image', src: 'sf-symbol:waveform.path.ecg', color: C_TITLE, width: 16, height: 16 },
-          { type: 'text', text: '网络诊断雷达', font: { size: 14, weight: 'bold' }, textColor: C_TITLE },
+          { type: 'image', src: 'sf-symbol:waveform.path.ecg', color: C.text, width: 16, height: 16 },
+          { type: 'text', text: '网络诊断雷达', font: { size: 14, weight: 'bold' }, textColor: C.text },
           { type: 'spacer' },
           { type: 'text', text: timeStr, font: { size: 10, weight: 'medium' }, textColor: TIME_COL }
       ]},
-      { type: 'spacer', length: 12 }, // 加大 Header 和主体的距离
+      { type: 'spacer', length: 12 }, 
       
-      // 双列网格 (引入 3 列 Stack：左侧列、中轴线、右侧列)
+      // 双列网格
       { type: 'stack', direction: 'row', gap: 10, children: [
           
-          // 【左列】：本地与影视
+          // 【左列】：本地与影视 (使用 C.cpu 科技蓝)
           { type: 'stack', direction: 'column', gap: 4.5, flex: 1, children: [
-              Row(netIcon, SYS_BLUE, "环境", netName, C_MAIN),
-              Row("wifi.router.fill", SYS_BLUE, "网关", gateway, C_MAIN),
-              Row("iphone", SYS_BLUE, "内网", localIp, C_MAIN),
-              Row("globe.asia.australia.fill", SYS_BLUE, "公网", localData.ip, C_MAIN),
-              Row("map.fill", SYS_BLUE, "位置", localData.loc, C_MAIN),
-              Row("timer", SYS_BLUE, "延迟", localDelay, C_MAIN), 
-              Row("play.tv.fill", SYS_BLUE, "影视", textVideo, C_MAIN) 
+              Row(netIcon, C.cpu, "环境", netName, C.text),
+              Row("wifi.router.fill", C.cpu, "网关", gateway, C.text),
+              Row("iphone", C.cpu, "内网", localIp, C.text),
+              Row("globe.asia.australia.fill", C.cpu, "公网", localData.ip, C.text),
+              Row("map.fill", C.cpu, "位置", localData.loc, C.text),
+              Row("timer", C.cpu, "延迟", localDelay, C.text), 
+              Row("play.tv.fill", C.cpu, "影视", textVideo, C.text) 
           ]},
 
-          // ✂️ 【中轴线】：阻断左右视觉粘连
-          { type: 'stack', width: 0.5, backgroundColor: C_DIVIDER },
+          // ✂️ 【中轴线】：使用 C.barBg 分割
+          { type: 'stack', width: 0.5, backgroundColor: C.barBg },
           
-          // 【右列】：代理与 AI
+          // 【右列】：代理与 AI (使用 C.mem 高贵紫)
           { type: 'stack', direction: 'column', gap: 4.5, flex: 1, children: [
-              Row("paperplane.fill", SYS_PURPLE, "出口", proxyData.ip, C_MAIN),
-              Row("mappin.and.ellipse", SYS_PURPLE, "落地", proxyData.loc, C_MAIN),
-              Row("server.rack", SYS_PURPLE, "厂商", proxyData.isp, C_MAIN),
-              Row(nativeIc, nativeCol, "属性", nativeText, C_MAIN), 
+              Row("paperplane.fill", C.mem, "出口", proxyData.ip, C.text),
+              Row("mappin.and.ellipse", C.mem, "落地", proxyData.loc, C.text),
+              Row("server.rack", C.mem, "厂商", proxyData.isp, C.text),
+              Row(nativeIc, nativeCol, "属性", nativeText, C.text), 
               Row(riskIc, riskCol, "纯净", riskTxt, riskCol),
-              Row("timer", SYS_PURPLE, "延迟", proxyDelay, C_MAIN), 
-              Row("cpu", SYS_PURPLE, "AI", textAI, C_MAIN) 
+              Row("timer", C.mem, "延迟", proxyDelay, C.text), 
+              Row("cpu", C.mem, "AI", textAI, C.text) 
           ]}
       ]},
       { type: 'spacer' }
